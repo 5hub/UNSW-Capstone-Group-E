@@ -9,15 +9,19 @@ Complete the information below regarding your group.
 ## Group and project information
 
 ### Group members and zIDs
-- Member 1 (zID1) - Group leader
-- Member 2 (zID2) - role
-- Member 3 (zID3) - role
-- Member 4 (zID4) - role
-- Member 5 (zID5) - role
+- Shubhankar Dutta (z5304573)  - Group Leader
+- Abdul	El-Hamawi	(z5019165)   - Data Scientist
+- David	Anderson (z5343521)    - Data Scientist
+- Chris	Strods (z5329477)      - Visualisation Specialist
+- Jamie	Twiss	(z5353394)       - Communications Manager
+- Sonal	Chawla	(z5092985)     - Communications Specialist
 
 ### Brief project description
 
-Describe your project in one paragraph.
+Energy demand forecasting is a vital challenge to everyone involved in the energy sector whether it be governments, market bodies or decision makers. Our reliance on reliable and cost-effective energy has grown drastically over the past few decades and throughout time there have been several irrefutable indications of just how valuable accurate energy forecasting can be. One of which is the 1973 oil crisis which saw oil prices rise 400% in the span of 5 months.
+
+The purpose of projectto to develop forecasting models will aim at providing a piece of analysis that could be used by a business or market body that operates within the energy sector to add value or ease their decision-making process.
+
 
 ## Repository structure
 
