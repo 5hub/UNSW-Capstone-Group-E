@@ -9,7 +9,7 @@ Complete the information below regarding your group.
 ## Group and project information
 
 ### Group members and zIDs
-- Shubhankar Dutta (z5304573)  - Group Leader
+- Shubhankar Dutta (z5304573)  - Project Lead
 - Abdul	El-Hamawi	(z5019165)   - Data Scientist
 - David	Anderson (z5343521)    - Data Scientist
 - Chris	Strods (z5329477)      - Visualisation Specialist
