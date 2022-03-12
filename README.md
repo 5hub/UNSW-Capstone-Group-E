@@ -32,5 +32,5 @@ The repository has the following folder structure:
 - data: datasets for analysis
 - gantt_chart: Gantt chart or a link to an account in a project task management tool
 - minutes: minutes for each meeting (left not more than 24h after the corresponding meeting)
-- report: RMarkdown or Jupyter notebook report in progress
+- report: RMarkdown report in progress
 - src: source code
