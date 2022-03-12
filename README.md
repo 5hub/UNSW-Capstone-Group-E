@@ -14,7 +14,7 @@ Complete the information below regarding your group.
 - David	Anderson (z5343521)    - Data Scientist
 - Chris	Strods (z5329477)      - Visualisation Specialist
 - Jamie	Twiss	(z5353394)       - Communications Manager
-- Sonal	Chawla	(z5092985)     - Communications Specialist
+- Sonal	Chawla	(z5092985)     - Communications and Visualisation Specialist
 
 ### Brief project description
 
