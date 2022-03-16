@@ -1,0 +1,124 @@
+---
+title: "Capstone_project_Group_E"
+authors: "Abdul	El-Hamawi	z5019165, Chris	Strods	z5329477, David Anderson z5343521, Jamie	Twiss	z5353394, Shubhankar	Dutta	z5304573, Sonal	Chawla	z5092985"
+date: "03/12/2022"
+output: html_document
+---
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r}
+library(lubridate)
+#library(readr)
+library(car)
+library(ggplot2)
+
+# Import temperature and demand datasets       
+temp_nsw <- read.csv("data/temperature_nsw.csv")
+temp_vic <- read.csv("data/temprature_vic.csv")
+temp_qld <- read.csv("data/temprature_qld.csv")
+temp_sa <- read.csv("data/temprature_sa.csv")
+
+dem_nsw <- read.csv("data/totaldemand_nsw.csv")
+dem_vic <- read.csv("data/totaldemand_vic.csv")
+dem_qld <- read.csv("data/totaldemand_qld.csv")
+dem_sa <- read.csv("data/totaldemand_sa.csv")
+
+## Have a look at how our data has been imported
+#head(temp_nsw)
+#head(temp_vic)
+#head(temp_qld)
+#head(temp_sa)
+
+# We can merge the demand and temperature data. This is essentially what we should be working with in order to create our models
+# Get rid of columns that we don't require
+temp_nsw <- temp_nsw[-c(1)]
+temp_vic <- temp_vic[-c(1)]
+temp_qld <- temp_qld[-c(1)]
+temp_sa <- temp_sa[-c(1, 2)]
+
+dem_sa <- dem_sa[-c(3)]
+dem_nsw <- dem_nsw[-c(3)]
+dem_vic <- dem_vic[-c(3)]
+dem_qld <- dem_qld[-c(3)]
+
+# Convert the DATETIME columns to similar formats in order to merge successfully
+########### For some reason temp_vic and dem_vic will not recognize/convert to AEDT which it should be. I have made a work-around by converting everything to AEST however the values of time_vic and dem_vic are incorrect as it gets set as AEST straight away instead of being set to AEDT then converted to AEST. Maybe this an issue with my local system timezone?
+########### I note here that unless you use head(temp_vic) the datetimes do not explicitly state that they are AEDT/AEST etc
+temp_nsw$DATETIME <- as.POSIXct(temp_nsw$DATETIME, format = "%d/%m/%Y %H:%M", tz = "Australia/Sydney")
+temp_vic$DATETIME <- as.POSIXct(temp_vic$DATETIME, format = "%d/%m/%Y %H:%M", tz = "Australia/Melbourne")
+temp_qld$DATETIME <- as.POSIXct(temp_qld$DATETIME, format = "%d/%m/%Y %H:%M", tz = "Australia/Brisbane")
+temp_sa$DATETIME <- as.POSIXct(temp_sa$DATETIME, format = "%Y-%m-%d %H:%M:%S", tz = "Australia/Adelaide")
+
+dem_nsw$DATETIME <- as.POSIXct(dem_nsw$DATETIME, format = "%d/%m/%Y %H:%M", tz = "Australia/Sydney")
+dem_vic$DATETIME <- as.POSIXct(dem_vic$DATETIME, format = "%Y-%m-%d %H:%M:%S", tz = "Australia/Melbourne")
+dem_qld$DATETIME <- as.POSIXct(dem_qld$DATETIME, format = "%Y-%m-%d %H:%M:%S", tz = "Australia/Brisbane")
+dem_sa$DATETIME <- as.POSIXct(dem_sa$DATETIME, format = "%Y-%m-%d %H:%M:%S", tz = "Australia/Adelaide")
+
+# Convert all times to AEST ##### This is only necessary if we wish to compare the data across the whole country at a single point in time.
+temp_nsw$DATETIME <- with_tz(temp_nsw$DATETIME, tzone = "Australia/Brisbane")
+temp_qld$DATETIME <- with_tz(temp_qld$DATETIME, tzone = "Australia/Brisbane")
+temp_sa$DATETIME <- with_tz(temp_sa$DATETIME, tzone = "Australia/Brisbane")
+
+dem_nsw$DATETIME <- with_tz(dem_nsw$DATETIME, tzone = "Australia/Brisbane")
+dem_qld$DATETIME <- with_tz(dem_qld$DATETIME, tzone = "Australia/Brisbane")
+dem_sa$DATETIME <- with_tz(dem_sa$DATETIME, tzone = "Australia/Brisbane")
+
+# Create the dataframes containing temp and demand
+NSW_df <- merge(temp_nsw, dem_nsw, by = 'DATETIME')
+VIC_df <- merge(temp_vic, dem_vic, by = 'DATETIME')
+QLD_df <- merge(temp_qld, dem_qld, by = 'DATETIME')
+SA_df <- merge(temp_sa, dem_sa, by = 'DATETIME')
+
+## Check for nulls
+#is.null(NSW_df)
+#is.null(VIC_df)
+#is.null(QLD_df)
+#is.null(SA_df)
+# No nulls found
+```
+
+
+
+Is this as far as our data exploration has to go? It seems to me as though we should be focusing on the data from a single state for the following reasons:
+  - Combining data from other states is likely to increase the spread of the data rather than decreasing it, leading to less accurate forecasts.
+  - Timezones are difficult to deal with.
+  - Having too much data could actually be cumbersome to deal with.
+  - I can't think of an appropriate dimensionality reduction technique that would work well at this point.
+
+I don't want to go too far ahead at the moment but maybe it would be fun to recreate a basic image of the data that we were given in the week 1 readings.
+
+
+
+```{r}
+# Split NSW dataframe DATETIME column into Date and Time columns, this helps to create graphs in reasonable time
+NSW_df$Date <- as.Date(NSW_df$DATETIME)
+NSW_df$Time <- format(as.POSIXct(NSW_df$DATETIME), format = "%H:%M:%S")
+NSW_df <- NSW_df[-c(1)]
+
+# Create a dataframe for the 2020 NSW data
+NSW_df_2020 <- subset(NSW_df, Date > "2020-01-01" & Date < "2021-01-01")
+
+# Plot a scatterplot of energy demand in relation to temperature
+#scatterplot(TOTALDEMAND ~ TEMPERATURE, data = NSW_df_2020, xlab = "Temperature (degrees celsius)", ylab = "Energy Demand (MW)", main = "Energy Demand NSW 2009")
+ggplot(NSW_df_2020, aes(x = TEMPERATURE, y = TOTALDEMAND)) + geom_point()
+```
+```{r}
+# Another plot for energy demand over days of the year
+ggplot(NSW_df_2020, aes(x = Date, y = TOTALDEMAND)) + geom_point()
+```
+
+
+```{r}
+# Another plot for energy demand over time of day
+ggplot(NSW_df_2020, aes(x = Time, y = TOTALDEMAND)) + geom_point()
+```
+
+
+
+
+
