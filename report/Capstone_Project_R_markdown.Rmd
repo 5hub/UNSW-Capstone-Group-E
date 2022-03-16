@@ -18,15 +18,19 @@ library(car)
 library(ggplot2)
 
 # Import temperature and demand datasets       
-temp_nsw <- read.csv("data/temperature_nsw.csv")
-temp_vic <- read.csv("data/temprature_vic.csv")
-temp_qld <- read.csv("data/temprature_qld.csv")
-temp_sa <- read.csv("data/temprature_sa.csv")
+setwd('../data/')
+temp_nsw <- read.csv(unz('H03-2021/temperature_nsw.csv.zip', 'temperature_nsw.csv'), header = T)
+temp_vic <- read.csv(unz('H06-2021/d.zip', 'd/temprature_vic.csv'), header = T)
+temp_qld <- read.csv(unz('H06-2021/d.zip', 'd/temprature_qld.csv'), header = T)
+temp_sa <- read.csv(unz('H06-2021/d.zip', 'd/temprature_sa.csv'), header = T)
 
-dem_nsw <- read.csv("data/totaldemand_nsw.csv")
-dem_vic <- read.csv("data/totaldemand_vic.csv")
-dem_qld <- read.csv("data/totaldemand_qld.csv")
-dem_sa <- read.csv("data/totaldemand_sa.csv")
+dem_nsw <- read.csv(unz('H03-2021/totaldemand_nsw.csv.zip', 'totaldemand_nsw.csv'), header = T)
+dem_vic <- read.csv(unz('H06-2021/d.zip', 'd/totaldemand_vic.csv'), header = T)
+dem_qld <- read.csv(unz('H06-2021/d.zip', 'd/totaldemand_qld.csv'), header = T)
+dem_sa <- read.csv(unz('H06-2021/d.zip', 'd/totaldemand_sa.csv'), header = T)
+
+# Can we get this to work?
+#fcst_nsw <- read.csv(unz('H03-2021/forecastdemand_nsw.csv.zip.partaa', 'forecastdemand_nsw.csv'), header = T)
 
 ## Have a look at how our data has been imported
 #head(temp_nsw)
@@ -41,10 +45,10 @@ temp_vic <- temp_vic[-c(1)]
 temp_qld <- temp_qld[-c(1)]
 temp_sa <- temp_sa[-c(1, 2)]
 
-dem_sa <- dem_sa[-c(3)]
 dem_nsw <- dem_nsw[-c(3)]
 dem_vic <- dem_vic[-c(3)]
 dem_qld <- dem_qld[-c(3)]
+dem_sa <- dem_sa[-c(3)]
 
 # Convert the DATETIME columns to similar formats in order to merge successfully
 ########### For some reason temp_vic and dem_vic will not recognize/convert to AEDT which it should be. I have made a work-around by converting everything to AEST however the values of time_vic and dem_vic are incorrect as it gets set as AEST straight away instead of being set to AEDT then converted to AEST. Maybe this an issue with my local system timezone?
@@ -80,6 +84,9 @@ SA_df <- merge(temp_sa, dem_sa, by = 'DATETIME')
 #is.null(QLD_df)
 #is.null(SA_df)
 # No nulls found
+```
+```{r}
+
 ```
 
 
