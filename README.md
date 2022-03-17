@@ -26,7 +26,7 @@ The purpose of this project is to develop forecasting model that will aim at pro
 ## Repository structure
 
 The repository has the following folder structure:
-
+- Data Exploration: Each Team member will independently work and explore the Data in Week 2. This folder has five additional sub-folders. Each Sub-Folder is allocated to an individual team member so that they can store their work/insights in the subfolder assigned to the individual. Later the team will collaborate and discuss each individual's findings to determine the next step.
 - agendas: agendas for each weekly meeting with lecturers (left 24h before the next meeting)
 - checklists: teamwork checklist or a link to an account in a project task management tool
 - data: datasets for analysis
