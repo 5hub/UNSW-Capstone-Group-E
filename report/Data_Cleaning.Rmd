@@ -1,0 +1,178 @@
+---
+title: "Capstone_project_Group_E"
+authors: "Abdul	El-Hamawi	z5019165, Chris	Strods	z5329477, David Anderson z5343521, Jamie	Twiss	z5353394, Shubhankar	Dutta	z5304573, Sonal	Chawla	z5092985"
+date: "03/12/2022"
+output: html_document
+---
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r}
+library(lubridate)
+#library(readr)
+library(car)
+library(ggplot2)
+library(tidyverse)
+library(dplyr)
+
+# Import temperature and demand datasets       
+setwd('../data/')
+temp_nsw <- read.csv(unz('H03-2021/temperature_nsw.csv.zip', 'temperature_nsw.csv'), header = T)
+dem_nsw <- read.csv(unz('H03-2021/totaldemand_nsw.csv.zip', 'totaldemand_nsw.csv'), header = T)
+
+# Can we get this to work?
+#fcst_nsw <- read.csv(unz('H03-2021/forecastdemand_nsw.csv.zip.partaa', 'forecastdemand_nsw.csv'), header = T)
+
+## Have a look at how our data has been imported
+#head(temp_nsw)
+#head(dem_nsw)
+
+## Check for nulls
+#is.null(temp_nsw)
+#is.null(dem_nsw)
+# No nulls found
+
+# We can merge the demand and temperature data. This is essentially what we should be working with in order to create our models
+# Get rid of columns that we don't require
+temp_nsw <- temp_nsw[-c(1)]
+dem_nsw <- dem_nsw[-c(3)]
+
+# Convert the DATETIME columns to datetime formats
+temp_nsw$DATETIME <- as.POSIXct(temp_nsw$DATETIME, format = "%d/%m/%Y %H:%M", tz = "Australia/Sydney")
+dem_nsw$DATETIME <- as.POSIXct(dem_nsw$DATETIME, format = "%d/%m/%Y %H:%M", tz = "Australia/Sydney")
+
+# Split DATETIME column into Date and Time columns
+temp_nsw$Date <- as.Date(temp_nsw$DATETIME)
+temp_nsw$Time <- format(as.POSIXct(temp_nsw$DATETIME), format = "%H:%M:%S")
+temp_nsw <- temp_nsw[-c(1)]
+dem_nsw$Date <- as.Date(dem_nsw$DATETIME)
+dem_nsw$Time <- format(as.POSIXct(dem_nsw$DATETIME), format = "%H:%M:%S")
+dem_nsw <- dem_nsw[-c(1)]
+
+# Check for any missing values.
+temp_nsw[rowSums(is.na(temp_nsw)) > 0, ] 
+dem_nsw[rowSums(is.na(dem_nsw)) > 0, ]
+```
+
+The missing values in each set of data correspond to the same times between 01:30:00 and 03:00:00, all on days around early October each year. All but the first set of missing values in temp_data occur in pairs and correspond to 02:00:00 and 02:30:00 times.
+
+```{r}
+# Fill in the missing date values with the last valid date
+temp_nsw <- temp_nsw %>%
+  mutate(Date = replace(Date, is.nan(Date), NA)) %>%
+  fill(Date)
+
+dem_nsw <- dem_nsw %>%
+  mutate(Date = replace(Date, is.nan(Date), NA)) %>%
+  fill(Date)
+
+# Get rid of the extra row of NaN values for temp_nsw
+temp_nsw <- temp_nsw[-14314, ]
+
+# Create lists of row index values
+missing_temp_dates <- which(is.na(temp_nsw$Time))
+missing_dem_dates <- which(is.na(dem_nsw$Time))
+
+# Split these lists into indexs that correspond to 2:00 and 2:30
+two_oclock_temp_rows <- missing_temp_dates[seq(1, length(missing_temp_dates), 2)]
+two_thirty_temp_rows <- missing_temp_dates[seq(0, length(missing_temp_dates), 2)]
+two_oclock_dem_rows <- missing_dem_dates[seq(1, length(missing_dem_dates), 2)]
+two_thirty_dem_rows <- missing_dem_dates[seq(0, length(missing_dem_dates), 2)]
+
+# Enter the values as required
+for (i in two_oclock_temp_rows){temp_nsw[i, 3] <- '02:00:00'}
+for (i in two_thirty_temp_rows){temp_nsw[i, 3] <- '02:30:00'}
+for (i in two_oclock_dem_rows){dem_nsw[i, 3] <- '02:00:00'}
+for (i in two_thirty_dem_rows){dem_nsw[i, 3] <- '02:30:00'}
+
+## Make sure all columns are in the correct format
+#temp_nsw$Time <- strptime(temp_nsw$Time, "%H:%M:%S")
+#temp_nsw$Date <- as.Date(temp_nsw$Date, "%Y:%m:%d")
+
+#dem_nsw$Time <- strptime(dem_nsw$Time, "%H:%M:%S")
+#dem_nsw$Date <- as.Date(dem_nsw$Date, "%Y:%m:%d")
+
+
+
+```
+
+
+That resolves the missing values.
+
+Our data is from 01-01-2010 until 18-03-2021 which is 4094 days.
+
+Check to see how many of each unique value date and time contains.
+```{r}
+# Cheack the count og all unique time values in each data frame
+as.data.frame(table(temp_nsw$Time))
+as.data.frame(table(dem_nsw$Time))
+```
+We can see that dem_nsw contains 4094 days worth of data (and 1 extra 00:00:00 value) as long as there are no duplicated values.
+
+```{r}
+# Check for duplicates
+dem_nsw[duplicated(cbind(dem_nsw$Date, dem_nsw$Time)), ]
+```
+
+There are no duplicated rows. Why do these rows show up?
+
+
+
+
+Thus we have all of the times that we wish to include from 01-01-2010 until 18-03-2021, occurring in 30 minute intervals. 
+We can do a left merge onto this data in order to preserve this structure and finish cleaning the temp data in this new structure.
+
+```{r}
+# Do a left merge on dem and temp data
+NSW_df <- left_join(dem_nsw, temp_nsw, by = c('Date', 'Time'))
+```
+Why does this give me extra rows?
+
+```{r}
+anti_join(NSW_df, dem_nsw)
+```
+
+
+```{r}
+as.data.frame(table(NSW_df$Time))
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{r}
+# Create a dataframe for the 2020 NSW data
+NSW_df_2020 <- subset(NSW_df, Date > "2020-01-01" & Date < "2021-01-01")
+
+# Plot a scatterplot of energy demand in relation to temperature
+#scatterplot(TOTALDEMAND ~ TEMPERATURE, data = NSW_df_2020, xlab = "Temperature (degrees celsius)", ylab = "Energy Demand (MW)", main = "Energy Demand NSW 2009")
+ggplot(NSW_df_2020, aes(x = TEMPERATURE, y = TOTALDEMAND)) + geom_point()
+```
+```{r}
+# Another plot for energy demand over days of the year
+ggplot(NSW_df_2020, aes(x = Date, y = TOTALDEMAND)) + geom_point()
+```
+
+
+```{r}
+# Another plot for energy demand over time of day
+ggplot(NSW_df_2020, aes(x = Time, y = TOTALDEMAND)) + geom_point()
+```
+
+
+
+
+
