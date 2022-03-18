@@ -1,5 +1,5 @@
 ---
-title: "Reducing the forecast_nsw dataset"
+title: "Cleaning the forecast_nsw dataset"
 authors: "David Anderson z5343521"
 date: "22/03/2022"
 output: html_document
@@ -15,20 +15,26 @@ library(car)
 library(ggplot2)
 library(tidyverse)
 library(dplyr)
+library(data.table)
+library(R.utils)
 ```
 
 
 ```{r}
-# Import temperature and demand datasets       
-#setwd('../David/')
-
-# Import forecast dataset     
-fcst_nsw <- read.csv(unz('forecastdemand_nsw_reduced.csv.zip', 'forecastdemand_nsw_reduced.csv'), header = T)
-
-
-
-
+# Import forecast dataset
+fcst_nsw = fread("forecastdemand_nsw_reduced.csv.gz")
 ```
+
+
+```{r}
+## Import forecast dataset      
+#setwd('../David/')
+#getwd()
+
+#t <- unz('forecastdemand_nsw_reduced.csv.zip', 'forecastdemand_nsw_reduced.csv')
+#fcst_nsw <- read.csv(t, header = T)
+```
+
 
 
 

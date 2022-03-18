@@ -8,6 +8,8 @@ output: html_document
 I wish to reduce the size of the forecast_nsw dataset so that we can store it on the GitHub repository.
 
 ```{r}
+#library(zip)
+
 # Import forecast dataset. This will need to be changed to suit your own local directories       
 fcst_nsw <- read.csv('F:/Users/Dave/Desktop/forecastdemand_nsw.csv', header = T)
 
@@ -17,8 +19,14 @@ fcst_nsw <- read.csv('F:/Users/Dave/Desktop/forecastdemand_nsw.csv', header = T)
 fcst_nsw <- fcst_nsw[, -c(1,2)]
 
 # Export the NSW_df to csv
-write.csv(fcst_nsw, file=gzfile("forecastdemand_nsw_reduced.csv.zip"), row.names = FALSE)
+write.csv(fcst_nsw, file = gzfile("forecastdemand_nsw_reduced.csv.gz"), row.names = FALSE)
+#write.csv(fcst_nsw,  zip("forecastdemand_nsw_reduced.csv.zip"), row.names = FALSE)
 
 ```
+Will need to use fread in order to unzip a .gz file
 
 Done!
+
+
+
+
