@@ -28,13 +28,6 @@ setwd('../data/')
 temp_nsw <- read.csv(unz('H03-2021/temperature_nsw.csv.zip', 'temperature_nsw.csv'), header = T)
 dem_nsw <- read.csv(unz('H03-2021/totaldemand_nsw.csv.zip', 'totaldemand_nsw.csv'), header = T)
 
-# Can we get this to work?
-#fcst_nsw <- read.csv(unz('H03-2021/forecastdemand_nsw.csv.zip.partaa', 'forecastdemand_nsw.csv'), header = T)
-
-## Have a look at how our data has been imported
-#head(temp_nsw)
-#head(dem_nsw)
-
 # Get rid of columns that we don't require
 temp_nsw <- temp_nsw[-c(1)]
 dem_nsw <- dem_nsw[-c(3)]
@@ -49,7 +42,7 @@ temp_nsw <- temp_nsw %>%
 temp_nsw <- temp_nsw %>%
   mutate("Time" = str_extract(DATETIME, "[0-9]?[0-9]:[0-9]{2}"))
 
-# Delete DATETIME columns
+## Delete DATETIME columns
 temp_nsw <- temp_nsw[-c(1)]
 dem_nsw <- dem_nsw[-c(1)]
 
@@ -58,7 +51,7 @@ temp_nsw[rowSums(is.na(temp_nsw)) > 0, ]
 dem_nsw[rowSums(is.na(dem_nsw)) > 0, ]
 
 ```
-No missing values?
+No missing values.
 
 Our data is from 01-01-2010 until 18-03-2021 which is 4094 days.
 
@@ -85,10 +78,15 @@ This is as expected, the last date (18/3/2021) Was only sampled once.
 dem_nsw <- dem_nsw[-196513, ]
 ```
 
-So can we conclude from this that our data follows the time sampling format that we require?
+```{r}
+# Check for duplicates
+dem_nsw[duplicated(dem_nsw[, ]), ]
+```
+
+Since we have 4095 samples of each timestamp, every date occurs 48 times and there are no duplicated records, we can conclude that our data follows the time sampling format we require.
 
 Thus we have all of the times that we wish to include from 01-01-2010 until 18-03-2021, occurring in 30 minute intervals. 
-We can do a left merge onto this data in order to preserve this structure and finish cleaning the temp data in this new structure.
+We can do a left merge onto this data in order to preserve it's structure and finish cleaning the temp data in this new structure.
 
 ```{r}
 # Do a left merge on dem and temp data
@@ -102,7 +100,7 @@ Why does this give extra rows?
 filter(as.data.frame(table(NSW_df$Date)), Freq != 48)
 ```
 
-The extra rows are all just identical, duplicated rows. Why did they appear though??
+The extra rows are all just duplicated rows. Why did they appear though??
 
 ```{r}
 # Get rid of duplicates
@@ -112,7 +110,6 @@ NSW_df <- NSW_df[!duplicated(NSW_df[, ]), ]
 Our data is now in the correct time series format. We just need to make sure that the temperature data is all there and we can move on to visualization. Incorrectly entered data may still be an issue, this shoudl appear in visualization.
 
 ```{r}
-
 # Check for NaN values
 NSW_df[rowSums(is.na(NSW_df)) > 0, ]
 
@@ -127,6 +124,7 @@ NSW_df <- NSW_df %>%
   fill(TEMPERATURE)
 ```
 
+
 This concludes the data cleaning for now I think. More to come after visualization or as people proof this code, I'm sure.
 
 ```{r}
@@ -134,10 +132,4 @@ This concludes the data cleaning for now I think. More to come after visualizati
 setwd('../report/')
 write.csv(NSW_df, "Cleaned_Data.csv", row.names = FALSE)
 ```
-
-
-
-
-
-
 
