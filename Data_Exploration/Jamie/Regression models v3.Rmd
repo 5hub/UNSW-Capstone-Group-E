@@ -1,0 +1,114 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
+
+
+---
+title: "Simple NSW models"
+authors: "Jamie Twiss z5353394, using cleaning code from David Anderson z5343521"
+date: "22/03/2022"
+output: html_document
+---
+
+I wish to reduce the size of the forecast_nsw dataset so that we can store it on the GitHub repository.
+
+
+```{r}
+# Import libraries
+library(lubridate)
+#library(readr)
+library(car)
+library(ggplot2)
+library(tidyverse)
+library(dplyr)
+library(data.table)
+library(R.utils)
+library(caret)
+library(hms)
+library(NLP)
+library(splines)
+library(gam)
+library(mgcv)
+```
+
+
+```{r}
+# Import forecast dataset
+
+temp_nsw <- read.csv("data/temperature_nsw.csv")
+dem_nsw <- read.csv("data/totaldemand_nsw.csv")
+temp_nsw$DATETIME <- dmy_hm(temp_nsw$DATETIME)
+dem_nsw$DATETIME <- dmy_hm(dem_nsw$DATETIME)
+
+NSW_df <- merge(temp_nsw, dem_nsw, by = 'DATETIME')
+
+NSW_df$year <- year(NSW_df$DATETIME)
+NSW_df$week <- week(NSW_df$DATETIME)
+NSW_df$month <- month(NSW_df$DATETIME)
+NSW_df$wday <- wday(NSW_df$DATETIME)
+NSW_df$time <- as_hms(NSW_df$DATETIME)
+
+head(NSW_df)
+
+```
+
+
+```{r}
+
+ggplot(NSW_df, aes(x = TEMPERATURE, y = TOTALDEMAND)) + geom_point()
+ggplot(NSW_df, aes(group = year, y = TOTALDEMAND)) + geom_boxplot()
+ggplot(NSW_df, aes(group = week, y = TOTALDEMAND)) + geom_boxplot()
+ggplot(NSW_df, aes(group = wday, y = TOTALDEMAND)) + geom_boxplot()
+
+
+```
+
+
+
+
+
+```{r}
+
+
+
+head(NSW_df)
+
+datelims = range(NSW_df$week)
+date.grid = seq(from=datelims[1],to=datelims[2],length.out = 1000)
+
+#fit = lm.fit(TOTALDEMAND~Date,data = NSW_df) # if you use lm instead of lm.fit, you'll get more info, but it will take MUCH longer
+
+fit = lm(TOTALDEMAND~bs(week,df=42),data = NSW_df)
+pred = predict(fit,newdata=list(week=date.grid),se=T)
+plot(NSW_df$week,NSW_df$TOTALDEMAND,col="gray")
+lines(date.grid,pred$fit,lwd=2)
+lines(date.grid,pred$fit+2*pred$se,lty="dashed")
+lines(date.grid,pred$fit-2*pred$se,lty="dashed")
+
+
+
+
+
+```
+
+```{r}
+
+
+
+gam.fit = lm(TOTALDEMAND~ns(week,5)+year+wday+ns(time,5)+ns(TEMPERATURE,5),data=NSW_df)
+summary(gam.fit)
+
+plot(gam.fit)
+
+gam2.fit = gam(TOTALDEMAND~week+year+wday+time+TEMPERATURE,data=NSW_df)
+summary(gam2.fit)
+
+plot(gam2.fit)
+
+
+```
