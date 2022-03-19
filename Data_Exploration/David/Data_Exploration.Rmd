@@ -1,0 +1,182 @@
+---
+title: "NSW data exploration"
+author: "David Anderson z5343521"
+date: "19/03/2022"
+output: html_document
+---
+
+I want to explore the energy demand dataset for NSW and see if I can find any interesting trends in the demand over time or demand in relation to temperature which could be used to create a valid forecast model.
+
+```{r}
+# Import libraries
+library(lubridate)
+#library(readr)
+#library(car)
+library(ggplot2)
+#library(tidyverse)
+library(dplyr)
+#library(data.table)
+#library(R.utils)
+#library(caret)
+library(hms)
+#library(NLP)
+library(splines)
+library(gam)
+library(mgcv)
+
+# Import forecast dataset
+NSW_df <- read.csv("../../report/Cleaned_Data.csv")
+```
+
+The data that we have is far too large in volume in order to do any meaningful visualization in R successfully without some form of reduction/grouping.
+I think a good first approach would be to average the temp and demand data per day.
+
+```{r}
+# Convert date and time to a datetime
+NSW_df$DATETIME <- paste(NSW_df$Date, NSW_df$Time)
+NSW_df$DATETIME <- dmy_hm(NSW_df$DATETIME)
+NSW_df <- NSW_df[, -c(2,3)]
+
+# Group based on certain conditions to make plotting easier
+NSW_df$year <- year(NSW_df$DATETIME)
+NSW_df$month <- month(NSW_df$DATETIME)
+NSW_df$week <- week(NSW_df$DATETIME)
+NSW_df$wday <- wday(NSW_df$DATETIME)
+NSW_df$time <- as_hms(NSW_df$DATETIME)
+
+# Create a dataframe of the average temperature per day and average demand per day
+NSW_daily_df <- NSW_df %>%
+  mutate(Date = date(DATETIME)) %>%
+  group_by(Date) %>%
+  summarize(mean_Temp = mean(TEMPERATURE), mean_Dem = mean(TOTALDEMAND))
+```
+
+It's unlikely to give us any results but let's look at the relation between temp and demand per year to see if there is magically a useful correlation.
+
+```{r fig.height = 10, fig.width = 30}
+# Plot the daily temp and demand data per year. Note that this is scaling the demand data by a factor of 300
+ggplot(NSW_daily_df, aes(x = mean_Temp, y = mean_Dem)) +
+  geom_point() +
+  facet_wrap(~year(Date))
+```
+
+We can see a recurring 'U' shaped pattern that is very similar year to year. A simple regression model would have far too much error based on how widely spread the data points are from an imagined line of best fit.
+Let's see if we can find some trends and/or make a linear regression model work somehow, even though it would be wildly inaccurate.
+
+Let's look at the trend in demand and temperature over time individually.
+
+```{r fig.height = 10, fig.width = 30}
+# Plot the daily temp and demand data on the same axis to see any correlation.
+ggplot(NSW_daily_df, aes(x = Date)) +
+  geom_line(aes(y = mean_Temp), colour = 'red') + 
+  geom_line(aes(y = mean_Dem/400), colour = 'blue') +
+  scale_y_continuous(name = 'Temperature', sec.axis = sec_axis(~.*400, name = 'Demand'))
+
+```
+
+This does show some trends:
+      - There is definitely a shallow 'W' shape in the energy usage every year (and a more emphasized one in Temp). This likely corresponds to high energy usage for cooling and heating in summer and winter, with lower usage in the transitory months.
+      - Energy demand in trending slightly downward over the years.
+      - Is temperature trending slightly upwards over the years? Yes but very slowly, and not consistently.
+
+It would be more informative to see this graph on a per year scale I think.
+
+```{r fig.height = 10, fig.width = 30}
+# Plot the daily temp and demand data per year. Note that this is scaling the demand data by a factor of 300
+ggplot(NSW_daily_df, aes(x = Date)) +
+  geom_line(aes(y = mean_Temp), colour = 'red') + 
+  geom_line(aes(y = mean_Dem/250), colour = 'blue') +
+  scale_y_continuous(name = 'Temperature', sec.axis = sec_axis(~.*250, name = 'Demand')) +
+  facet_wrap(~year(Date), scales = 'free')
+  
+```
+
+There is definitely a correlation between temperature and demand but we can see that both are quite chaotic and that the correlation is not strongly followed all of the time.
+All of the years exhibit similar trends. Note again that the demand data is scaled by a factor of 250 and the y-axis scales are free to fit the data, so we will not notice any increase/reduction over time in relative temp/demand in this plot.
+
+The data seems to show that there is more chaotic energy usage in the months of Nov - Feb. Can we verify this with a plot?
+
+```{r fig.height = 10, fig.width = 30}
+# Boxplot temp per month
+ggplot(NSW_df, aes(x = month, y = TEMPERATURE, group = month)) + geom_boxplot() + xlim(0, 13)
+
+# Boxplot demand per month
+ggplot(NSW_df, aes(x = month, y = TOTALDEMAND, group = month)) + geom_boxplot() + xlim(0, 13)
+
+```
+
+There is definitely more chaotic temperatures and demand between Nov - Feb (outliers in the boxplots). These dates do not have a much higher average energy usage however.
+
+I'd love to see if there was an interesting correlation between demand and temperature if the temperature was measured in total degrees away from the yearly average.
+
+```{r}
+# Calculate the absolute value of the difference between each day's average temperature and the average temperature for that year.
+NSW_daily_df <- NSW_daily_df %>%
+  mutate(Year = year(Date)) %>%
+  group_by(Year) %>%
+  mutate(Temp_Fluctuation = abs(mean_Temp - mean(mean_Temp)))
+
+```
+
+```{r fig.height = 10, fig.width = 30}
+# Plot
+ggplot(NSW_daily_df, aes(x = Date)) +
+  geom_line(aes(y = Temp_Fluctuation), colour = 'red') + 
+  geom_line(aes(y = mean_Dem/250 - 25), colour = 'blue') +
+  scale_y_continuous(name = 'Temperature', sec.axis = sec_axis(~.*250 - 25, name = 'Demand')) +
+  facet_wrap(~year(Date), scales = 'free')
+  
+```
+
+This is a pretty strong correlation..... The demand is scaled by (*250 - 25) to better see the correlation.
+
+Let's look at what the original demand vs temp scatterplot looks like if we use temp fluctuation above/below average instead.
+
+```{r fig.height = 10, fig.width = 30}
+# Plot
+ggplot(NSW_daily_df, aes(x = Temp_Fluctuation, y = mean_Dem)) +
+  geom_point() +
+  geom_smooth(method = lm) +
+  facet_wrap(~year(Date))
+```
+
+The plot's correlations are more linear, as expected. 
+
+Interestingly? temp fluctuation contains less outliers than mean temp as shown in the boxplots below.
+
+```{r fig.height = 10, fig.width = 30}
+# Boxplot temp fluctuation per month
+ggplot(NSW_daily_df, aes(x = month(Date), y = Temp_Fluctuation, group = month(Date))) + geom_boxplot() + xlim(0, 13)
+
+```
+
+Let's make a linear model, for fun.
+
+```{r}
+lm1 <- lm(mean_Dem ~ Temp_Fluctuation, data = NSW_daily_df)
+summary(lm1)
+plot(lm1)
+```
+
+An R squared of 0.4 is pretty terrible. Having -2000 and +2000 residuals is also probably pretty terrible, leading to far too much or far too little energy being produced if this model was used.
+It's interesting how normally distributed the residuals are. Is this because we have so many data points?
+It's pretty unlikely to be able to improve a linear model to a point where it is useful.
+
+We have identified that a ML model is likely going to be our best option for this project. 
+Let's see if we can identify any factors that could be used to help train a ML model.
+
+```{r}
+# Plot demand over different time intervals to see any trends
+ggplot(NSW_df, aes(x = year, y = TOTALDEMAND, group = year)) + geom_boxplot()
+ggplot(NSW_df, aes(x = week, y = TOTALDEMAND, group = week)) + geom_boxplot()
+ggplot(NSW_df, aes(x = wday, y = TOTALDEMAND, group = wday)) + geom_boxplot()
+ggplot(NSW_df, aes(x = time, y = TOTALDEMAND, group = time)) + geom_boxplot()
+
+```
+
+We have already established that demand is decreasing over the years. This is likely due to more energy efficient appliances and practices.
+Demand over the week is just showing the more extreme values in summer months and a 'W' shape previously identified due to more energy being used to cool/heat in summer/winter and less so in transitory months.
+It looks like energy demand is down over the weekend, likely due to commercial and industrial requirements being lower.
+The average and spread of energy demand increases over time of the day from around 4:30am and starts decreasing at around 5:30pm, likely due to commercial and industrial requirements again. As the average usage increases, so does the spread.
+
+
