@@ -1,155 +1,131 @@
 ---
 title: "Cleaning the forecast_nsw dataset"
 authors: "David Anderson z5343521"
-date: "22/03/2022"
+date: "19/03/2022"
 output: html_document
 ---
 
-I wish to reduce the size of the forecast_nsw dataset so that we can store it on the GitHub repository.
+Now that the forecast NSW dataset has been reduced, I want to see what information can be extracted from it.
 
 ```{r}
 # Import libraries
 library(lubridate)
 #library(readr)
-library(car)
-library(ggplot2)
-library(tidyverse)
+#library(car)
+#library(ggplot2)
+#library(tidyverse)
 library(dplyr)
 library(data.table)
-library(R.utils)
+#library(R.utils)
 ```
-
-
-```{r}
-# Import forecast dataset
-fcst_nsw = fread("forecastdemand_nsw_reduced.csv.gz")
-```
-
 
 ```{r}
 ## Import forecast dataset      
 #setwd('../David/')
 #getwd()
+#fcst_nsw <- read.csv(unz("forecastdemand_nsw_reduced.csv.zip", "forecastdemand_nsw_reduced.csv"), header = T)
 
-#t <- unz('forecastdemand_nsw_reduced.csv.zip', 'forecastdemand_nsw_reduced.csv')
-#fcst_nsw <- read.csv(t, header = T)
+# Import forecast dataset
+fcst_nsw = fread("forecastdemand_nsw_reduced.csv.gz")
 ```
 
-
-
-
-
-
-
-
-Copied code from demand and temperature cleaning. Probably will need some common functions.
-
 ```{r}
-# Get rid of columns that we don't require
-temp_nsw <- temp_nsw[-c(1)]
-dem_nsw <- dem_nsw[-c(3)]
+# Create a new dataframe so that I can work on it and can re-load it from the original data without having to read the zipped file again which takes ages.
+fcst_nsw2 <- fcst_nsw
 
-# Split DATETIME into Date and Time columns
-dem_nsw <- dem_nsw %>%
-  mutate("Date" = str_extract(DATETIME, "[0-9]?[0-9]/[0-9]?[0-9]/[0-9]{4}"))
-dem_nsw <- dem_nsw %>%
-  mutate("Time" = str_extract(DATETIME, "[0-9]?[0-9]:[0-9]{2}"))
-temp_nsw <- temp_nsw %>%
-  mutate("Date" = str_extract(DATETIME, "[0-9]?[0-9]/[0-9]?[0-9]/[0-9]{4}"))
-temp_nsw <- temp_nsw %>%
-  mutate("Time" = str_extract(DATETIME, "[0-9]?[0-9]:[0-9]{2}"))
+# Convert the datetimes using lubridate
+fcst_nsw2$LASTCHANGED <- ymd_hms(fcst_nsw2$LASTCHANGED)
+fcst_nsw2$DATETIME <- ymd_hms(fcst_nsw2$DATETIME)
 
-# Delete DATETIME columns
-temp_nsw <- temp_nsw[-c(1)]
-dem_nsw <- dem_nsw[-c(1)]
-
-# Check for any missing values.
-temp_nsw[rowSums(is.na(temp_nsw)) > 0, ] 
-dem_nsw[rowSums(is.na(dem_nsw)) > 0, ]
-
-```
-No missing values?
-
-Our data is from 01-01-2010 until 18-03-2021 which is 4094 days.
-
-Check to see how many of each unique time value our dataframes contain.
-
-```{r}
-# Check the count of all unique time values in each data frame
-as.data.frame(table(temp_nsw$Time))
-as.data.frame(table(dem_nsw$Time))
+# Check to see how many forecasts there are from each model.
+as.data.frame(table(fcst_nsw2$PERIODID))
 ```
 
-This lines up with what we would expect in dem_nsw, if this follows the correct pattern of sampling every 30 mins across the span of our data we can use it as the data to left_join temp_nsw onto and resolve any issues from there.
+It looks like there are forecasts for all 196505 30 minute intervals of demand. The huge size of this dataset is in the fact that there are 79 different sets of forecasts, one for each 30 min interval before the actual datetime (from 30 mins to 79*30mins = 39hrs 30mins before the actual DATETIME).
+There are a fair few missing values after PERIODID 32. For the sake of brevity at the moment I will only include 32 forecast models.
 
-We can also check that each date in the data contains 48 samples
+#################This might need to change later to include all of them. This would likely involve filling in missing values however and would take time. ###########
 
 ```{r}
-filter(as.data.frame(table(dem_nsw$Date)), Freq != 48)
+## Calculate the difference between forecast and actual energy demand
+#fcst_nsw2 <- fcst_nsw2 %>%
+#  mutate(Time_since_Forecast = (DATETIME - LASTCHANGED))
+
+# Make 32 different dataframes, each containing the data from forecast 1*30mins out to 32*30mins out
+for (i in 1:32){
+  assign(paste0("Fcst", i), fcst_nsw2[fcst_nsw2$PERIODID == i, ][, -c(1, 3, 5)])
+  
+}
+
+#Import forecast dataset
+NSW_df <- read.csv("../../report/Cleaned_Data.csv")
+
+# Convert date and time to a datetime
+NSW_df$DATETIME <- paste(NSW_df$Date, NSW_df$Time)
+NSW_df$DATETIME <- dmy_hm(NSW_df$DATETIME)
+NSW_df <- NSW_df[, -c(2,3)]
+
+# Rename the forecast demand columns to something more appropriate for each forecast
+Fcst1 <- rename(Fcst1, Fcst1 = FORECASTDEMAND)
+Fcst32 <- rename(Fcst32, Fcst32 = FORECASTDEMAND)
+
+# Do a left merge on NSW_df and the forecast1 and forecast31 data
+NSW_df <- left_join(NSW_df, Fcst1, by = 'DATETIME', copy = TRUE)
+NSW_df <- left_join(NSW_df, Fcst32, by = 'DATETIME', copy = TRUE)
+
+# Create a column containing how much this forecast was away from the actual consumption
+NSW_df$Diff1 <- NSW_df$TOTALDEMAND - NSW_df$Fcst1
+NSW_df$Diff32 <- NSW_df$TOTALDEMAND - NSW_df$Fcst32
+
+# Plot this difference
+boxplot(NSW_df$Diff1, NSW_df$Diff32)
+
+# Caluculate five number summaries
+fivenum(NSW_df$Diff1)
+fivenum(NSW_df$Diff32)
 ```
 
-This is as expected, the last date (18/3/2021) Was only sampled once.
+I think these 5 number summaries are a good metric to evaluate any future models that we come up with.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Some code that doesn't work yet. This is how I think I need to simplify some of the above code.
 
 ```{r}
-# Remove the last row to make this easier
-dem_nsw <- dem_nsw[-196513, ]
-```
+for (i in 1:32){
+  assign(paste0("Fcst", i)[1], toString(paste0("Fcast", i)))
+  
+} 
 
-So can we conclude from this that our data follows the time sampling format that we require?
+rename((paste0("Fcast", 1), Fcst1 = FORECASTDEMAND)
 
-Thus we have all of the times that we wish to include from 01-01-2010 until 18-03-2021, occurring in 30 minute intervals. 
-We can do a left merge onto this data in order to preserve this structure and finish cleaning the temp data in this new structure.
+##names(Fcst1)[1] <- "Fcst1"
 
-```{r}
-# Do a left merge on dem and temp data
-NSW_df <- left_join(dem_nsw, temp_nsw, by = c('Date', 'Time'))
-```
-
-Why does this give extra rows?
-
-```{r}
-# Check where the extra rows have been inserted
-filter(as.data.frame(table(NSW_df$Date)), Freq != 48)
-```
-
-The extra rows are all just identical, duplicated rows. Why did they appear though??
-
-```{r}
-# Get rid of duplicates
-NSW_df <- NSW_df[!duplicated(NSW_df[, ]), ]
-```
-
-Our data is now in the correct time series format. We just need to make sure that the temperature data is all there and we can move on to visualization. Incorrectly entered data may still be an issue, this shoudl appear in visualization.
-
-```{r}
-
-# Check for NaN values
-NSW_df[rowSums(is.na(NSW_df)) > 0, ]
-
-```
-
-Fill NaN values.
-
-```{r}
-# Replcae any NaN temperature data with the value before it. I would like this to be the average of the temperature before it and the one after it instead. Maybe re-write this later.
-NSW_df <- NSW_df %>%
-  mutate(TEMPERATURE = replace(TEMPERATURE, is.nan(TEMPERATURE), NA)) %>%
-  fill(TEMPERATURE)
-```
-
-This concludes the data cleaning for now I think. More to come after visualization or as people proof this code, I'm sure.
-
-```{r}
-# Export the NSW_df to csv so that others can use it.
-setwd('../report/')
-write.csv(NSW_df, "Cleaned_Data.csv", row.names = FALSE)
+paste0("Fcst", 1)
 ```
 
 
 ```{r}
+# Make an empty list
+mylist <- list()
 
-# Export the NSW_df to csv
-#write.csv(fcst_nsw, file=gzfile("forecastdemand_nsw_reduced.csv.zip"), row.names = FALSE)
+# Populate it with each of the 32 different forecast models
+for (i in 1:32){
+  mylist[[i]] <- fcst_nsw2[fcst_nsw2$PERIODID == i, ]
+}
 ```
 
 
