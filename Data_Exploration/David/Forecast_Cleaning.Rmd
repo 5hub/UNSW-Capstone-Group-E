@@ -10,20 +10,16 @@ Now that the forecast NSW dataset has been reduced, I want to see what informati
 ```{r}
 # Import libraries
 library(lubridate)
-#library(readr)
-#library(car)
-#library(ggplot2)
-#library(tidyverse)
 library(dplyr)
 library(data.table)
-#library(R.utils)
+
 ```
 
 ```{r}
 ## Import forecast dataset      
-#setwd('../David/')
+#setwd('../')
 #getwd()
-#fcst_nsw <- read.csv(unz("forecastdemand_nsw_reduced.csv.zip", "forecastdemand_nsw_reduced.csv"), header = T)
+#fcst_nsw <- read.csv(unz("David/forecastdemand_nsw_reduced.zip", "forecastdemand_nsw_reduced.csv"), header = T)
 
 # Import forecast dataset
 fcst_nsw = fread("forecastdemand_nsw_reduced.csv.gz")
@@ -52,37 +48,37 @@ There are a fair few missing values after PERIODID 32. For the sake of brevity a
 #  mutate(Time_since_Forecast = (DATETIME - LASTCHANGED))
 
 # Make 32 different dataframes, each containing the data from forecast 1*30mins out to 32*30mins out
-for (i in 1:32){
-  assign(paste0("Fcst", i), fcst_nsw2[fcst_nsw2$PERIODID == i, ][, -c(1, 3, 5)])
+for (i in c(1,32)){
+  assign(paste0("Fcst", i), fcst_nsw2[fcst_nsw2$PERIODID == i, ][, -c(1, 3)])
   
 }
 
-#Import forecast dataset
-NSW_df <- read.csv("../../report/Cleaned_Data.csv")
+#Import cleaned dataset
+NSW_data <- read.csv("../../report/Cleaned_Data.csv")
 
 # Convert date and time to a datetime
-NSW_df$DATETIME <- paste(NSW_df$Date, NSW_df$Time)
-NSW_df$DATETIME <- dmy_hm(NSW_df$DATETIME)
-NSW_df <- NSW_df[, -c(2,3)]
+NSW_data$DATETIME <- paste(NSW_data$Date, NSW_data$Time)
+NSW_data$DATETIME <- dmy_hm(NSW_data$DATETIME)
+NSW_data <- NSW_data[, -c(2,3)]
 
 # Rename the forecast demand columns to something more appropriate for each forecast
 Fcst1 <- rename(Fcst1, Fcst1 = FORECASTDEMAND)
 Fcst32 <- rename(Fcst32, Fcst32 = FORECASTDEMAND)
 
-# Do a left merge on NSW_df and the forecast1 and forecast31 data
-NSW_df <- left_join(NSW_df, Fcst1, by = 'DATETIME', copy = TRUE)
-NSW_df <- left_join(NSW_df, Fcst32, by = 'DATETIME', copy = TRUE)
+# Do a left merge on NSW_data and the forecast1 and forecast31 data
+NSW_data <- left_join(NSW_data, Fcst1, by = 'DATETIME', copy = TRUE)
+NSW_data <- left_join(NSW_data, Fcst32, by = 'DATETIME', copy = TRUE)
 
 # Create a column containing how much this forecast was away from the actual consumption
-NSW_df$Diff1 <- NSW_df$TOTALDEMAND - NSW_df$Fcst1
-NSW_df$Diff32 <- NSW_df$TOTALDEMAND - NSW_df$Fcst32
+NSW_data$Diff1 <- NSW_data$TOTALDEMAND - NSW_data$Fcst1
+NSW_data$Diff32 <- NSW_data$TOTALDEMAND - NSW_data$Fcst32
 
 # Plot this difference
-boxplot(NSW_df$Diff1, NSW_df$Diff32)
+boxplot(NSW_data$Diff1, NSW_data$Diff32)
 
 # Caluculate five number summaries
-fivenum(NSW_df$Diff1)
-fivenum(NSW_df$Diff32)
+fivenum(NSW_data$Diff1)
+fivenum(NSW_data$Diff32)
 ```
 
 I think these 5 number summaries are a good metric to evaluate any future models that we come up with.

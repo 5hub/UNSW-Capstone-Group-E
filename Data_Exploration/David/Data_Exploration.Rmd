@@ -23,6 +23,7 @@ library(hms)
 library(splines)
 library(gam)
 library(mgcv)
+library(forecast)
 
 # Import forecast dataset
 NSW_df <- read.csv("../../report/Cleaned_Data.csv")
@@ -38,11 +39,11 @@ NSW_df$DATETIME <- dmy_hm(NSW_df$DATETIME)
 NSW_df <- NSW_df[, -c(2,3)]
 
 # Group based on certain conditions to make plotting easier
-NSW_df$year <- year(NSW_df$DATETIME)
-NSW_df$month <- month(NSW_df$DATETIME)
-NSW_df$week <- week(NSW_df$DATETIME)
-NSW_df$wday <- wday(NSW_df$DATETIME)
-NSW_df$time <- as_hms(NSW_df$DATETIME)
+#NSW_df$year <- year(NSW_df$DATETIME)
+#NSW_df$month <- month(NSW_df$DATETIME)
+#NSW_df$week <- week(NSW_df$DATETIME)
+#NSW_df$wday <- wday(NSW_df$DATETIME)
+#NSW_df$time <- as_hms(NSW_df$DATETIME)
 
 # Create a dataframe of the average temperature per day and average demand per day
 NSW_daily_df <- NSW_df %>%
@@ -54,11 +55,17 @@ NSW_daily_df <- NSW_df %>%
 It's unlikely to give us any results but let's look at the relation between temp and demand per year to see if there is magically a useful correlation.
 
 ```{r fig.height = 10, fig.width = 30}
-# Plot the daily temp and demand data per year. Note that this is scaling the demand data by a factor of 300
-ggplot(NSW_daily_df, aes(x = mean_Temp, y = mean_Dem)) +
+## Plot the daily temp and demand data per year. Note that this is scaling the demand data by a factor of 300
+#ggplot(NSW_daily_df, aes(x = mean_Temp, y = mean_Dem)) +
+#  geom_point() +
+#  facet_wrap(~year(Date))
+
+# Plot the temp and demand data per year. Note that this is scaling the demand data by a factor of 300
+ggplot(NSW_df, aes(x = TEMPERATURE, y = TOTALDEMAND)) +
   geom_point() +
-  facet_wrap(~year(Date))
+  facet_wrap(~year(DATETIME))
 ```
+
 
 We can see a recurring 'U' shaped pattern that is very similar year to year. A simple regression model would have far too much error based on how widely spread the data points are from an imagined line of best fit.
 Let's see if we can find some trends and/or make a linear regression model work somehow, even though it would be wildly inaccurate.
@@ -66,13 +73,20 @@ Let's see if we can find some trends and/or make a linear regression model work 
 Let's look at the trend in demand and temperature over time individually.
 
 ```{r fig.height = 10, fig.width = 30}
-# Plot the daily temp and demand data on the same axis to see any correlation.
-ggplot(NSW_daily_df, aes(x = Date)) +
-  geom_line(aes(y = mean_Temp), colour = 'red') + 
-  geom_line(aes(y = mean_Dem/400), colour = 'blue') +
+## Plot the daily temp and demand data on the same axis to see any correlation.
+#ggplot(NSW_daily_df, aes(x = Date)) +
+#  geom_line(aes(y = mean_Temp), colour = 'red') + 
+#  geom_line(aes(y = mean_Dem/400), colour = 'blue') +
+#  scale_y_continuous(name = 'Temperature', sec.axis = sec_axis(~.*400, name = 'Demand'))
+
+# Plot the temp and demand data on the same axis to see any correlation.
+ggplot(NSW_df, aes(x = DATETIME)) +
+  geom_line(aes(y = TEMPERATURE), colour = 'red') + 
+  geom_line(aes(y = TOTALDEMAND/400), colour = 'blue') +
   scale_y_continuous(name = 'Temperature', sec.axis = sec_axis(~.*400, name = 'Demand'))
 
 ```
+
 
 This does show some trends:
       - There is definitely a shallow 'W' shape in the energy usage every year (and a more emphasized one in Temp). This likely corresponds to high energy usage for cooling and heating in summer and winter, with lower usage in the transitory months.
@@ -82,12 +96,19 @@ This does show some trends:
 It would be more informative to see this graph on a per year scale I think.
 
 ```{r fig.height = 10, fig.width = 30}
-# Plot the daily temp and demand data per year. Note that this is scaling the demand data by a factor of 300
-ggplot(NSW_daily_df, aes(x = Date)) +
-  geom_line(aes(y = mean_Temp), colour = 'red') + 
-  geom_line(aes(y = mean_Dem/250), colour = 'blue') +
+## Plot the daily temp and demand data per year. Note that this is scaling the demand data by a factor of 300
+#ggplot(NSW_daily_df, aes(x = Date)) +
+#  geom_line(aes(y = mean_Temp), colour = 'red') + 
+#  geom_line(aes(y = mean_Dem/250), colour = 'blue') +
+#  scale_y_continuous(name = 'Temperature', sec.axis = sec_axis(~.*250, name = 'Demand')) +
+#  facet_wrap(~year(Date), scales = 'free')
+  
+# Plot the temp and demand data per year. Note that this is scaling the demand data by a factor of 300
+ggplot(NSW_df, aes(x = DATETIME)) +
+  geom_line(aes(y = TEMPERATURE), colour = 'red') + 
+  geom_line(aes(y = TOTALDEMAND/250), colour = 'blue') +
   scale_y_continuous(name = 'Temperature', sec.axis = sec_axis(~.*250, name = 'Demand')) +
-  facet_wrap(~year(Date), scales = 'free')
+  facet_wrap(~year(DATETIME), scales = 'free')
   
 ```
 
@@ -98,10 +119,10 @@ The data seems to show that there is more chaotic energy usage in the months of 
 
 ```{r fig.height = 10, fig.width = 30}
 # Boxplot temp per month
-ggplot(NSW_df, aes(x = month, y = TEMPERATURE, group = month)) + geom_boxplot() + xlim(0, 13)
+ggplot(NSW_df, aes(x = month(DATETIME), y = TEMPERATURE, group = month(DATETIME))) + geom_boxplot() + xlim(0, 13)
 
 # Boxplot demand per month
-ggplot(NSW_df, aes(x = month, y = TOTALDEMAND, group = month)) + geom_boxplot() + xlim(0, 13)
+ggplot(NSW_df, aes(x = month(DATETIME), y = TOTALDEMAND, group = month(DATETIME))) + geom_boxplot() + xlim(0, 13)
 
 ```
 
@@ -109,57 +130,90 @@ There is definitely more chaotic temperatures and demand between Nov - Feb (outl
 
 I'd love to see if there was an interesting correlation between demand and temperature if the temperature was measured in total degrees away from the yearly average.
 
-```{r}
-# Calculate the absolute value of the difference between each day's average temperature and the average temperature for that year.
-NSW_daily_df <- NSW_daily_df %>%
-  mutate(Year = year(Date)) %>%
-  group_by(Year) %>%
-  mutate(Temp_Fluctuation = abs(mean_Temp - mean(mean_Temp)))
-
-```
-
 ```{r fig.height = 10, fig.width = 30}
+## Calculate the absolute value of the difference between each day's average temperature and the average temperature for that year.
+#NSW_daily_df <- NSW_daily_df %>%
+#  mutate(Year = year(Date)) %>%
+#  group_by(Year) %>%
+#  mutate(Temp_Fluctuation = abs(mean_Temp - mean(mean_Temp)))
+
+# Calculate the absolute value of the difference between each temperature and the average temperature for that year.
+NSW_df <- NSW_df %>%
+  mutate(Year = year(DATETIME)) %>%
+  group_by(Year) %>%
+  mutate(Temp_Fluctuation = abs(TEMPERATURE - mean(TEMPERATURE)))
+
+## Plot
+#ggplot(NSW_daily_df, aes(x = Date)) +
+#  geom_line(aes(y = Temp_Fluctuation), colour = 'red') + 
+#  geom_line(aes(y = mean_Dem/250 - 25), colour = 'blue') +
+#  scale_y_continuous(name = 'Temperature', sec.axis = sec_axis(~.*250 - 25, name = 'Demand')) +
+#  facet_wrap(~year(Date), scales = 'free')
+
 # Plot
-ggplot(NSW_daily_df, aes(x = Date)) +
+ggplot(NSW_df, aes(x = DATETIME)) +
   geom_line(aes(y = Temp_Fluctuation), colour = 'red') + 
-  geom_line(aes(y = mean_Dem/250 - 25), colour = 'blue') +
+  geom_line(aes(y = TOTALDEMAND/250), colour = 'blue') +
   scale_y_continuous(name = 'Temperature', sec.axis = sec_axis(~.*250 - 25, name = 'Demand')) +
-  facet_wrap(~year(Date), scales = 'free')
-  
+  facet_wrap(~year(DATETIME), scales = 'free')
 ```
 
-This is a pretty strong correlation..... The demand is scaled by (*250 - 25) to better see the correlation.
+
+This is a pretty strong correlation..... The demand is scaled by 250 to better see the correlation.
 
 Let's look at what the original demand vs temp scatterplot looks like if we use temp fluctuation above/below average instead.
 
 ```{r fig.height = 10, fig.width = 30}
 # Plot
-ggplot(NSW_daily_df, aes(x = Temp_Fluctuation, y = mean_Dem)) +
+ggplot(NSW_df, aes(x = Temp_Fluctuation, y = TOTALDEMAND)) +
   geom_point() +
   geom_smooth(method = lm) +
-  facet_wrap(~year(Date))
+  facet_wrap(~year(DATETIME))
 ```
 
-The plot's correlations are more linear, as expected. 
+The plot's correlations are better than before, as expected. 
 
-Interestingly? temp fluctuation contains less outliers than mean temp as shown in the boxplots below.
-
-```{r fig.height = 10, fig.width = 30}
-# Boxplot temp fluctuation per month
-ggplot(NSW_daily_df, aes(x = month(Date), y = Temp_Fluctuation, group = month(Date))) + geom_boxplot() + xlim(0, 13)
-
-```
-
-Let's make a linear model, for fun.
+Let's make some linear models, for fun.
 
 ```{r}
-lm1 <- lm(mean_Dem ~ Temp_Fluctuation, data = NSW_daily_df)
+# First linear model between temp and demand. I expect this to be useless
+lm1 <- lm(TOTALDEMAND ~ TEMPERATURE, data = NSW_df)
 summary(lm1)
 plot(lm1)
+
+NSW_df$lm1_fcst <- predict(lm1)
+NSW_df$lm1_res <- NSW_df$TOTALDEMAND - NSW_df$lm1_fcst
 ```
 
-An R squared of 0.4 is pretty terrible. Having -2000 and +2000 residuals is also probably pretty terrible, leading to far too much or far too little energy being produced if this model was used.
-It's interesting how normally distributed the residuals are. Is this because we have so many data points?
+An R squared of 0.02 is useless. The residuals vs fitted is the shape that we expect. Normal Q-Q shows that our model does not capture extreme values at all.
+
+```{r}
+# A linear model between temp fluctuation away from the yearly average will likely fix the Residuals vs fitted graph
+lm2 <- lm(TOTALDEMAND ~ Temp_Fluctuation, data = NSW_df)
+summary(lm2)
+plot(lm2)
+
+NSW_df$lm2_fcst <- predict(lm2)
+NSW_df$lm2_res <- NSW_df$TOTALDEMAND - NSW_df$lm2_fcst
+```
+
+An R squared of 0.08 is still useless. The Residuals vs Fitted was 'better'. Normal Q-Q shows that we capture some extreme values a bit better. The model is still useless overall.
+
+Let's compare this simple model to the forecast models given in the data files.
+
+```{r}
+# Boxplots
+boxplot(NSW_data$Diff1, NSW_data$Diff32, NSW_df$lm1_diff, NSW_df$lm2_diff)
+
+# Caluculate five number summaries
+fivenum(NSW_data$Diff1)
+fivenum(NSW_data$Diff32)
+fivenum(NSW_df$lm1_diff)
+fivenum(NSW_df$lm2_diff)
+```
+
+The boxplots and fivenumber summaries show that our models perform terribly compared to the other provided.
+
 It's pretty unlikely to be able to improve a linear model to a point where it is useful.
 
 We have identified that a ML model is likely going to be our best option for this project. 
@@ -167,10 +221,10 @@ Let's see if we can identify any factors that could be used to help train a ML m
 
 ```{r}
 # Plot demand over different time intervals to see any trends
-ggplot(NSW_df, aes(x = year, y = TOTALDEMAND, group = year)) + geom_boxplot()
-ggplot(NSW_df, aes(x = week, y = TOTALDEMAND, group = week)) + geom_boxplot()
-ggplot(NSW_df, aes(x = wday, y = TOTALDEMAND, group = wday)) + geom_boxplot()
-ggplot(NSW_df, aes(x = time, y = TOTALDEMAND, group = time)) + geom_boxplot()
+ggplot(NSW_df, aes(x = year(DATETIME), y = TOTALDEMAND, group = year(DATETIME))) + geom_boxplot()
+ggplot(NSW_df, aes(x = week(DATETIME), y = TOTALDEMAND, group = week(DATETIME))) + geom_boxplot()
+ggplot(NSW_df, aes(x = wday(DATETIME), y = TOTALDEMAND, group = wday(DATETIME))) + geom_boxplot()
+#ggplot(NSW_df, aes(x = time(DATETIME), y = TOTALDEMAND, group = time(DATETIME))) + geom_boxplot()
 
 ```
 
