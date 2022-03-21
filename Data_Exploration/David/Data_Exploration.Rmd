@@ -20,10 +20,10 @@ library(dplyr)
 #library(caret)
 library(hms)
 #library(NLP)
-library(splines)
-library(gam)
-library(mgcv)
-library(forecast)
+#library(splines)
+#library(gam)
+#library(mgcv)
+#library(forecast)
 
 # Import forecast dataset
 NSW_df <- read.csv("../../report/Cleaned_Data.csv")
@@ -203,14 +203,32 @@ Let's compare this simple model to the forecast models given in the data files.
 
 ```{r}
 # Boxplots
-boxplot(NSW_data$Diff1, NSW_data$Diff32, NSW_df$lm1_diff, NSW_df$lm2_diff)
+boxplot(NSW_data$Diff1, NSW_data$Diff32, NSW_df$lm1_res, NSW_df$lm2_res)
 
 # Caluculate five number summaries
 fivenum(NSW_data$Diff1)
 fivenum(NSW_data$Diff32)
-fivenum(NSW_df$lm1_diff)
-fivenum(NSW_df$lm2_diff)
+fivenum(NSW_df$lm1_res)
+fivenum(NSW_df$lm2_res)
+
+sqrt(mean(NSW_data$Diff1^2))
+sqrt(mean(NSW_data$Diff32^2))
+sqrt(mean((NSW_df$lm1_res)^2))
+sqrt(mean((NSW_df$lm2_res)^2))
+
+mae(NSW_data$TOTALDEMAND, NSW_data$Fcst1)
+mae(NSW_data$TOTALDEMAND, NSW_data$Fcst32)
+mae(NSW_df$TOTALDEMAND, NSW_df$lm1_fcst)
+mae(NSW_df$TOTALDEMAND, NSW_df$lm2_fcst)
 ```
+
+
+
+
+```{r}
+library(Metrics)
+```
+
 
 The boxplots and fivenumber summaries show that our models perform terribly compared to the other provided.
 
@@ -224,7 +242,7 @@ Let's see if we can identify any factors that could be used to help train a ML m
 ggplot(NSW_df, aes(x = year(DATETIME), y = TOTALDEMAND, group = year(DATETIME))) + geom_boxplot()
 ggplot(NSW_df, aes(x = week(DATETIME), y = TOTALDEMAND, group = week(DATETIME))) + geom_boxplot()
 ggplot(NSW_df, aes(x = wday(DATETIME), y = TOTALDEMAND, group = wday(DATETIME))) + geom_boxplot()
-#ggplot(NSW_df, aes(x = time(DATETIME), y = TOTALDEMAND, group = time(DATETIME))) + geom_boxplot()
+ggplot(NSW_df, aes(x = as_hms(DATETIME), y = TOTALDEMAND, group = as_hms(DATETIME))) + geom_boxplot()
 
 ```
 

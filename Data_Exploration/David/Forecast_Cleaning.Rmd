@@ -13,14 +13,6 @@ library(lubridate)
 library(dplyr)
 library(data.table)
 
-```
-
-```{r}
-## Import forecast dataset      
-#setwd('../')
-#getwd()
-#fcst_nsw <- read.csv(unz("David/forecastdemand_nsw_reduced.zip", "forecastdemand_nsw_reduced.csv"), header = T)
-
 # Import forecast dataset
 fcst_nsw = fread("forecastdemand_nsw_reduced.csv.gz")
 ```
@@ -43,10 +35,6 @@ There are a fair few missing values after PERIODID 32. For the sake of brevity a
 #################This might need to change later to include all of them. This would likely involve filling in missing values however and would take time. ###########
 
 ```{r}
-## Calculate the difference between forecast and actual energy demand
-#fcst_nsw2 <- fcst_nsw2 %>%
-#  mutate(Time_since_Forecast = (DATETIME - LASTCHANGED))
-
 # Make 32 different dataframes, each containing the data from forecast 1*30mins out to 32*30mins out
 for (i in c(1,32)){
   assign(paste0("Fcst", i), fcst_nsw2[fcst_nsw2$PERIODID == i, ][, -c(1, 3)])
@@ -54,34 +42,88 @@ for (i in c(1,32)){
 }
 
 #Import cleaned dataset
-NSW_data <- read.csv("../../report/Cleaned_Data.csv")
+clean_NSW_data <- read.csv("Cleaned_Data_mkII.csv")
 
-# Convert date and time to a datetime
-NSW_data$DATETIME <- paste(NSW_data$Date, NSW_data$Time)
-NSW_data$DATETIME <- dmy_hm(NSW_data$DATETIME)
-NSW_data <- NSW_data[, -c(2,3)]
+clean_NSW_data$DATETIME <- ymd_hms(clean_NSW_data$DATETIME)
 
 # Rename the forecast demand columns to something more appropriate for each forecast
 Fcst1 <- rename(Fcst1, Fcst1 = FORECASTDEMAND)
 Fcst32 <- rename(Fcst32, Fcst32 = FORECASTDEMAND)
 
-# Do a left merge on NSW_data and the forecast1 and forecast31 data
-NSW_data <- left_join(NSW_data, Fcst1, by = 'DATETIME', copy = TRUE)
-NSW_data <- left_join(NSW_data, Fcst32, by = 'DATETIME', copy = TRUE)
+# Do a left merge on clean_NSW_data and the forecast1 and forecast31 data
+clean_data_w_fcst <- left_join(clean_NSW_data, Fcst1, by = 'DATETIME', copy = TRUE)
+clean_data_w_fcst <- left_join(clean_data_w_fcst, Fcst32, by = 'DATETIME', copy = TRUE)
 
 # Create a column containing how much this forecast was away from the actual consumption
-NSW_data$Diff1 <- NSW_data$TOTALDEMAND - NSW_data$Fcst1
-NSW_data$Diff32 <- NSW_data$TOTALDEMAND - NSW_data$Fcst32
+clean_data_w_fcst$Fcst1_res <- clean_data_w_fcst$TOTALDEMAND - clean_data_w_fcst$Fcst1
+clean_data_w_fcst$Fcst32_res <- clean_data_w_fcst$TOTALDEMAND - clean_data_w_fcst$Fcst32
+
+# Fill NA values with the value before it.
+setnafill(clean_data_w_fcst, type = "locf")
 
 # Plot this difference
-boxplot(NSW_data$Diff1, NSW_data$Diff32)
+boxplot(clean_data_w_fcst$Fcst1_res, clean_data_w_fcst$Fcst32_res)
 
 # Caluculate five number summaries
-fivenum(NSW_data$Diff1)
-fivenum(NSW_data$Diff32)
+fivenum(clean_data_w_fcst$Fcst1_res)
+fivenum(clean_data_w_fcst$Fcst32_res)
 ```
 
 I think these 5 number summaries are a good metric to evaluate any future models that we come up with.
+
+```{r}
+# Export the clean_data_w_fcst to csv
+write.csv(clean_data_w_fcst, "Cleaned_Data_w_fcst.csv", row.names = FALSE)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

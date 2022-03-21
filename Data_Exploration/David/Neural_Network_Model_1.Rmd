@@ -1,0 +1,476 @@
+---
+title: "Neural_Network_Model_1"
+author: "David Anderson"
+date: "20/03/2022"
+output: html_document
+---
+
+I would like to explore the possibility of using a neural network model in order to better forecast energy usage.
+
+The variables that were identified from data exploration as having an impact on energy usage characteristics were:
+    - Temperature
+    - Weekday vs weekend
+    - On-peak vs off-peak energy times during the day
+    - Year
+    - Season
+
+I think to build a model that is simplified enough to perform in a reasonable amount of time these variables could be encoded as dummy variables (is this the right term?) and only data from the last 4 or 5 years could be used.
+
+First, let's try to make a model out of the current dataset to see how well it performs in time, MAE and RSME.
+
+```{r}
+# Import libraries
+library(lubridate)
+library(ggplot2)
+library(dplyr)
+library(data.table)
+library(hms)
+library(keras)
+library(tensorflow)
+library(tidyverse)
+library(caret)
+library(doParallel)
+
+# Import cleaned data
+NSW_df <- read.csv("../../report/Cleaned_Data.csv")
+
+# Convert date and time to a datetime
+NSW_df$DATETIME <- paste(NSW_df$Date, NSW_df$Time)
+NSW_df$DATETIME <- dmy_hm(NSW_df$DATETIME)
+NSW_df <- NSW_df[, -c(2,3)]
+
+# Group based on certain conditions to make plotting easier
+NSW_df$year <- year(NSW_df$DATETIME) - 2000
+NSW_df$month <- month(NSW_df$DATETIME)
+NSW_df$day <- day(NSW_df$DATETIME)
+NSW_df$time <- (hour(NSW_df$DATETIME)*60 + minute(NSW_df$DATETIME))/30
+NSW_df <- NSW_df[, -3]
+
+set.seed(2) 
+registerDoParallel(cores=4)
+
+# Normalize the data
+maxs <- apply(NSW_df[, c(1,2)], 2, max) 
+mins <- apply(NSW_df[, c(1,2)], 2, min)
+NSW_df[, c(1,2)] <- scale(NSW_df[, c(1,2)], center = mins, scale = maxs - mins)
+
+# Split the data into training and testing set
+index <- sample(1:nrow(NSW_df), round(0.75 * nrow(NSW_df)))
+train_ <- NSW_df[index,]
+test_ <- NSW_df[-index,]
+
+# fit model with dropout
+system.time(mlpKerasDropout <- train(TOTALDEMAND ~ ., data = train_, method = 'mlpKerasDropout', trControl = trainControl(method = 'cv', number = 10)))
+mlpKerasDropout
+
+mlpKerasDropout$results %>% 
+  arrange(RMSE) %>% 
+  head(10)
+```
+
+```{r}
+system.time(mlpKerasDropout2 <- train(TOTALDEMAND ~ ., data = train_, method = 'mlpKerasDropout', trControl = trainControl(search = 'random', method = 'cv', number = 10), epochs = 10, tuneLength = 100))
+mlpKerasDropout2
+
+mlpKerasDropout$results %>% 
+  arrange(RMSE) %>% 
+  head(10)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{r}
+#library(NLP)
+#library(splines)
+#library(gam)
+#library(mgcv)
+#library(forecast)
+#library(neuralnet)
+#library(caTools)
+
+#sample = sample.split(NSW_df$DATETIME, SplitRatio = .75)
+#train = subset(NSW_df, sample == TRUE)
+#test  = subset(NSW_df, sample == FALSE)
+
+
+# define base model
+model = keras_model_sequential() %>% 
+   layer_dense(units=64, activation="relu", input_shape=3) %>% 
+   layer_dense(units=32, activation = "relu") %>% 
+   layer_dense(units=1, activation="linear")
+ 
+model %>% compile(
+   loss = "mse",
+   optimizer =  "adam", 
+   metrics = list("mean_absolute_error")
+ )
+ 
+model %>% summary()
+
+	
+
+```
+```{r}
+model %>% fit(x, y, epochs = 100,verbose = 0)
+ 
+scores = model %>% evaluate(x, y, verbose = 0)
+print(scores)
+```
+
+
+
+
+```{r}
+nn <- neuralnet(TOTALDEMAND ~ ., data = train_, hidden = c(10, 6), linear.output = TRUE)
+```
+
+
+```{r}
+plot(nn)
+```
+
+
+
+```{r}
+predict <- compute(nn, test)
+pred <- predict$net.result
+```
+
+
+```{r}
+# Plot regression line
+plot(test$TOTALDEMAND, pred, col = "red", 
+     main = 'Real vs Predicted')
+abline(0, 1, lwd = 2)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{r}
+
+boston_housing <- dataset_boston_housing()
+c(train_data, train_labels) %<-% boston_housing$train
+c(test_data, test_labels) %<-% boston_housing$test
+paste0("Training entries: ", length(train_data), ", labels: ", length(train_labels))
+
+train_data[1, ] 
+
+library(tibble)
+
+column_names <- c('CRIM', 'ZN', 'INDUS', 'CHAS', 'NOX', 'RM', 'AGE', 
+                  'DIS', 'RAD', 'TAX', 'PTRATIO', 'B', 'LSTAT')
+train_df <- as_tibble(train_data)
+colnames(train_df) <- column_names
+
+#Train_df
+#Train_labels[1:10] 
+
+#Test data is *not* used when calculating the mean and std.
+#Normalise training data
+train_data <- scale(train_data) 
+
+#Use means and standard deviations from training set to normalize test set
+col_means_train <- attr(train_data, "scaled:center") 
+col_stddevs_train <- attr(train_data, "scaled:scale")
+test_data <- scale(test_data, center = col_means_train, scale = col_stddevs_train)
+
+train_data[1, ] # First training sample, normalized
+```
+
+
+```{r}
+colnames(train_) <- c('TEMPERATURE', 'year', 'month', 'day', 'time')
+Train_labels[2:6] 
+
+```
+
+
+```{r}
+
+build_model <- function() {
+  
+  model <- keras_model_sequential() %>%
+    layer_dense(units = 24, activation = "relu", input_shape = dim(train_)[2]) %>%
+    layer_dense(units = 24, activation = "relu") %>%
+    layer_dense(units = 1)
+  
+  model %>% compile(loss = "mse",optimizer = optimizer_rmsprop(), metrics = list("mean_absolute_error"))
+  model
+}
+
+model <- build_model()
+model %>% summary()
+
+# Display training progress by printing a single dot for each completed epoch.
+print_dot_callback <- callback_lambda(
+  on_epoch_end = function(epoch, logs) {
+    if (epoch %% 80 == 0) cat("\n")
+    cat(".")
+  }
+)    
+
+epochs <- 500
+
+# Fit the model and store training stats
+history <- model %>% fit(
+  train_data,
+  train_labels,
+  epochs = epochs,
+  validation_split = 0.2,
+  verbose = 0,
+  callbacks = list(print_dot_callback)
+)
+
+library(ggplot2)
+
+plot(history, metrics = "mean_absolute_error", smooth = FALSE) + coord_cartesian(ylim = c(0, 5))
+
+
+c(loss, mae) %<-% (model %>% evaluate(test_data, test_labels, verbose = 0))
+
+paste0("Mean absolute error on test set: $", sprintf("%.2f", mae * 1000))
+```
+
+
+
+
+
+
+
+
+```{r}
+# Build Neural Network
+nn <- neuralnet(TOTALDEMAND ~ ., data = train_, hidden = c(5, 3), linear.output =  TRUE)
+#nn <- neuralnet(TOTALDEMAND ~ TEMPERATURE + year + month + day + time, data = train_, hidden = 5, linear.output = TRUE)
+```
+
+
+```{r}
+# Predict on test data
+pr.nn <- compute(nn, test_[,2:6])
+  
+# Compute mean squared error
+pr.nn_ <- pr.nn$net.result * (max(NSW_df$TOTALDEMAND) - min(NSW_df$TOTALDEMAND)) + min(NSW_df$TOTALDEMAND)
+test.r <- (test_$TOTALDEMAND) * (max(NSW_df$TOTALDEMAND) - min(NSW_df$TOTALDEMAND)) + min(NSW_df$TOTALDEMAND)
+MSE.nn <- sum((test.r - pr.nn_)^2) / nrow(test_)
+  
+# Plot the neural network
+plot(nn)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{r}
+library(GuessCompx)
+```
+
+```{r}
+
+nn_test = function(data) {
+  nn = neuralnet(TOTALDEMAND ~ TEMPERATURE, data = data, hidden = 1, linear.output = TRUE)
+    #neuralnet(formula = Y ~ ., data = data, hidden = 10, err.fct = "sse", threshold = 1, learningrate = .05, rep = 1, linear.output = FALSE)
+}
+```
+
+
+```{r}
+CompEst(train_, nn_test)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{r}
+nn <- neuralnet(TOTALDEMAND ~ TEMPERATURE + year + month + wday, data = train, hidden = c(10, 6), linear.output = FALSE)
+```
+
+
+
+```{r}
+plot(nn)
+```
+
+
+
+```{r}
+predict <- compute(nn, test)
+pred <- predict$net.result
+```
+
+
+```{r}
+# Plot regression line
+plot(test$TOTALDEMAND, pred, col = "red", 
+     main = 'Real vs Predicted')
+abline(0, 1, lwd = 2)
+```
+
+```{r}
+library(MASS)
+data <- Boston
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{r}
+#install.packages("rlang")
+
+#install.packages('keras')
+#install.packages('tensorflow')
+#install.packages('devtools')
+
+#library(devtools)
+
+#devtools::install_github("rstudio/keras", dependencies = TRUE)
+#devtools::install_github("rstudio/tensorflow", dependencies = TRUE)
+
+#install_keras()
+#install_tensorflow()
+#Sys.setenv(RETICULATE_PYTHON = "C:/ProgramData/Anaconda3/")
+
+#library(reticulate)
+#setwd("C:/ProgramData/Anaconda3/Scripts/")
+#install_keras()
+#install_tensorflow()
+#library(e1071)
+
+```

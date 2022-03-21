@@ -1,0 +1,197 @@
+---
+title: "NSW data exploration"
+author: "David Anderson z5343521"
+date: "19/03/2022"
+output: html_document
+---
+
+I want to explore the energy demand dataset for NSW and see if I can find any interesting trends in the demand over time or demand in relation to temperature which could be used to create a valid forecast model.
+I will be using a set of data that has already been cleaned.
+
+```{r}
+# Import libraries
+library(lubridate)
+library(ggplot2)
+library(dplyr)
+library(hms)
+library(Metrics)
+
+# Import cleaned data
+NSW_df <- read.csv("Cleaned_Data_w_fcst.csv")
+NSW_df$DATETIME <- ymd_hms(NSW_df$DATETIME)
+```
+
+It's unlikely to give us any results but let's look at the relation between temp and demand per year to see if there is magically a useful correlation.
+
+```{r fig.height = 10, fig.width = 30}
+# Plot the temp and demand data per year
+ggplot(NSW_df, aes(x = TEMPERATURE, y = TOTALDEMAND)) +
+  geom_point() +
+  facet_wrap(~year(DATETIME))
+```
+
+We can see a recurring 'U' shaped pattern that is very similar year to year. A simple regression model would have far too much error based on how widely spread the data points are from an imagined line of best fit.
+Let's see if we can find some trends and/or make a linear regression model work somehow, even though it would be wildly inaccurate.
+
+Let's look at the trend in demand and temperature over time individually.
+
+```{r fig.height = 10, fig.width = 30}
+# Plot the temp and demand data on a dual y axis against time to see any correlation.
+ggplot(NSW_df, aes(x = DATETIME)) +
+  geom_line(aes(y = TEMPERATURE), colour = 'red') + 
+  geom_line(aes(y = TOTALDEMAND/400), colour = 'blue') +
+  scale_y_continuous(name = 'Temperature', sec.axis = sec_axis(~.*400, name = 'Demand'))
+
+```
+
+This does show some trends:
+      - There is definitely a 'W' shape in the energy usage every year (and a more emphasized one in Temp). This likely corresponds to high energy usage for cooling and heating in summer and winter, with lower usage in the transitory months.
+      - Energy demand in trending slightly downward over the years.
+      - Is temperature trending slightly upwards over the years? Yes but very slowly, and not consistently.
+
+It would be more informative to see this graph on a per year scale I think.
+
+```{r fig.height = 10, fig.width = 30}
+# Plot the temp and demand data per year
+ggplot(NSW_df, aes(x = DATETIME)) +
+  geom_line(aes(y = TEMPERATURE), colour = 'red') + 
+  geom_line(aes(y = TOTALDEMAND/250), colour = 'blue') +
+  scale_y_continuous(name = 'Temperature', sec.axis = sec_axis(~.*250, name = 'Demand')) +
+  facet_wrap(~year(DATETIME), scales = 'free')
+  
+```
+
+There is definitely a correlation between temperature and demand but we can see that both are quite chaotic and that the correlation is not strongly followed all of the time.
+All of the years exhibit similar trends. Note that the demand data is scaled by a factor of 250 and the y-axis scales are free to fit the data, so we will not notice any increase/reduction over time in relative temp/demand in this plot.
+
+The data seems to show that there is more chaotic energy usage in the months of Nov - Feb. Can we verify this with a plot?
+
+```{r fig.height = 10, fig.width = 30}
+# Boxplot temp per month
+ggplot(NSW_df, aes(x = month(DATETIME), y = TEMPERATURE, group = month(DATETIME))) + geom_boxplot() + xlim(0, 13)
+
+# Boxplot demand per month
+ggplot(NSW_df, aes(x = month(DATETIME), y = TOTALDEMAND, group = month(DATETIME))) + geom_boxplot() + xlim(0, 13)
+```
+
+There is definitely more chaotic temperatures and demand between Nov - Feb (outliers in the boxplots). These dates do not have a much higher average energy usage however.
+
+I'd love to see if there was an interesting correlation between demand and temperature if the temperature was measured in total degrees away from the yearly average.
+
+```{r fig.height = 10, fig.width = 30}
+# Calculate the absolute value of the difference between each temperature and the average temperature for that year.
+NSW_df <- NSW_df %>%
+  mutate(Year = year(DATETIME)) %>%
+  group_by(Year) %>%
+  mutate(Temp_Fluctuation = abs(TEMPERATURE - mean(TEMPERATURE)))
+
+# Plot
+ggplot(NSW_df, aes(x = DATETIME)) +
+  geom_line(aes(y = Temp_Fluctuation), colour = 'red') + 
+  geom_line(aes(y = TOTALDEMAND/250), colour = 'blue') +
+  scale_y_continuous(name = 'Temperature', sec.axis = sec_axis(~.*250, name = 'Demand')) +
+  facet_wrap(~year(DATETIME), scales = 'free')
+```
+
+This looks like a pretty strong correlation..... The demand is again scaled by 250 to better see the correlation.
+
+Let's look at what the demand vs temp fluctuation scatterplot looks like.
+
+```{r fig.height = 10, fig.width = 30}
+# Plot demand against temperature fluctuation per year
+ggplot(NSW_df, aes(x = Temp_Fluctuation, y = TOTALDEMAND)) +
+  geom_point() +
+  geom_smooth(method = lm) +
+  facet_wrap(~year(DATETIME))
+```
+
+The 'U' shape is gone.
+
+Let's make some linear models, for fun.
+
+```{r}
+# First linear model between temp and demand
+lm1 <- lm(TOTALDEMAND ~ TEMPERATURE, data = NSW_df)
+summary(lm1)
+plot(lm1)
+
+NSW_df$lm1_fcst <- predict(lm1)
+NSW_df$lm1_res <- NSW_df$TOTALDEMAND - NSW_df$lm1_fcst
+```
+
+An R squared of 0.02 is useless. The residuals vs fitted is the shape that we expect. Normal Q-Q shows that our model does not capture extreme values well at all.
+
+```{r}
+# A linear model between temp fluctuation away from the yearly average will likely fix the Residuals vs fitted graph
+lm2 <- lm(TOTALDEMAND ~ Temp_Fluctuation, data = NSW_df)
+summary(lm2)
+plot(lm2)
+
+NSW_df$lm2_fcst <- predict(lm2)
+NSW_df$lm2_res <- NSW_df$TOTALDEMAND - NSW_df$lm2_fcst
+```
+
+An R squared of 0.08 is still useless. The Residuals vs Fitted was 'better'. Normal Q-Q shows that we capture some extreme values a bit better. The model is still useless overall.
+
+Let's compare this simple model to the forecast models given in the data files.
+
+```{r}
+## Boxplots
+#boxplot(NSW_df$Diff1, NSW_df$Diff32, NSW_df$lm1_res, NSW_df$lm2_res)
+
+# Caluculate five number summaries
+fivenum(NSW_df$Fcst1_res)
+fivenum(NSW_df$Fcst32_res)
+fivenum(NSW_df$lm1_res)
+fivenum(NSW_df$lm2_res)
+
+# Calculate RSME
+print("RSME")
+sqrt(mean(NSW_df$Fcst1_res^2))
+sqrt(mean(NSW_df$Fcst32_res^2))
+sqrt(mean((NSW_df$lm1_res)^2))
+sqrt(mean((NSW_df$lm2_res)^2))
+
+# Calculate MAE
+print("MAE")
+mae(NSW_df$TOTALDEMAND, NSW_df$Fcst1)
+mae(NSW_df$TOTALDEMAND, NSW_df$Fcst32)
+mae(NSW_df$TOTALDEMAND, NSW_df$lm1_fcst)
+mae(NSW_df$TOTALDEMAND, NSW_df$lm2_fcst)
+```
+
+These metrics show that our models perform terribly compared to the other provided.
+
+It's pretty unlikely to be able to improve a linear model to a point where it is useful.
+
+We have identified that a ML model is likely going to be our best option for this project. 
+Let's see if we can identify any factors that could be used to help train a ML model.
+
+```{r}
+# Plot demand over different time intervals to see any trends
+ggplot(NSW_df, aes(x = year(DATETIME), y = TOTALDEMAND, group = year(DATETIME))) + geom_boxplot()
+ggplot(NSW_df, aes(x = week(DATETIME), y = TOTALDEMAND, group = week(DATETIME))) + geom_boxplot()
+ggplot(NSW_df, aes(x = wday(DATETIME), y = TOTALDEMAND, group = wday(DATETIME))) + geom_boxplot()
+ggplot(NSW_df, aes(x = as_hms(DATETIME), y = TOTALDEMAND, group = as_hms(DATETIME))) + geom_boxplot()
+
+```
+
+We have already established that demand is decreasing over the years. This is likely due to more energy efficient appliances and practices.
+Demand over the week is just showing the more extreme values in summer months and a 'W' shape previously identified due to more energy being used to cool/heat in summer/winter and less so in transitory months.
+It looks like energy demand is down over the weekend, likely due to commercial and industrial requirements being lower.
+The average and spread of energy demand increases over time of the day from around 4:30am and starts decreasing at around 5:30pm, likely due to commercial and industrial requirements again. As the average usage increases, so does the spread.
+
+The key variables that we can identify from this for use in a ML model would be:
+    - Weekday vs weekend
+    - On-peak vs off-peak energy times during the day
+    - Year
+    - Season
+
+
+```{r}
+# Export the clean_data_w_fcst to csv
+write.csv(NSW_df, "Explored_data.csv", row.names = FALSE)
+```
+
+
+
