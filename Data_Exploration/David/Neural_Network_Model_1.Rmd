@@ -69,7 +69,7 @@ mlpKerasDropout$results %>%
 ```
 
 ```{r}
-system.time(mlpKerasDropout2 <- train(TOTALDEMAND ~ ., data = train_, method = 'mlpKerasDropout', trControl = trainControl(search = 'random', method = 'cv', number = 10), epochs = 10, tuneLength = 100))
+system.time(mlpKerasDropout2 <- train(TOTALDEMAND ~ ., data = train_, method = 'mlpKerasDropout', trControl = trainControl(search = 'random', method = 'cv', number = 10), epochs = 10, tuneLength = 10))
 mlpKerasDropout2
 
 mlpKerasDropout$results %>% 
