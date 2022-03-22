@@ -30,6 +30,7 @@ library(tensorflow)
 library(tidyverse)
 library(caret)
 library(doParallel)
+library(chron)
 
 # Import cleaned data
 NSW_df <- read.csv("../../report/Cleaned_Data.csv")
@@ -40,27 +41,59 @@ NSW_df$DATETIME <- dmy_hm(NSW_df$DATETIME)
 NSW_df <- NSW_df[, -c(2,3)]
 
 # Group based on certain conditions to make plotting easier
-NSW_df$year <- year(NSW_df$DATETIME) - 2000
-NSW_df$month <- month(NSW_df$DATETIME)
-NSW_df$day <- day(NSW_df$DATETIME)
-NSW_df$time <- (hour(NSW_df$DATETIME)*60 + minute(NSW_df$DATETIME))/30
+#NSW_df$Year <- year(NSW_df$DATETIME)
+#NSW_df <- subset(NSW_df, Year == 2021)
+NSW_df$Month <- month(NSW_df$DATETIME)
+#NSW_df$day <- day(NSW_df$DATETIME)
+NSW_df$Is_Wknd <- grepl("S.+", weekdays(NSW_df$DATETIME))
+NSW_df$Is_Wknd <- NSW_df$Is_Wknd * 1
+NSW_df$Time <- (hour(NSW_df$DATETIME)*60 + minute(NSW_df$DATETIME))/30
+```
+
+
+```{r}
+NSW_df <- NSW_df[, -c(3)]
+
+
+#NSW_df$Time[NSW_df$Time < 1] <- 0
+#NSW_df$Time[NSW_df$Time > 40] <- 0
+#NSW_df$Time[NSW_df$Time > 0] <- 1
+
+NSW_df$Is_Peak <- NSW_df$Time
+NSW_df <- NSW_df[, -5]
+
+#NSW_df$Time_x <- sin(360/47 * NSW_df$Time)
+#NSW_df$Time_y <- cos(360/47 * NSW_df$Time)
+#NSW_df <- NSW_df[, -5]
+
+NSW_df$Month_x <- sin(360/12 * NSW_df$Month)
+NSW_df$Month_y <- cos(360/12 * NSW_df$Month)
 NSW_df <- NSW_df[, -3]
 
-set.seed(2) 
-registerDoParallel(cores=4)
 
 # Normalize the data
-maxs <- apply(NSW_df[, c(1,2)], 2, max) 
-mins <- apply(NSW_df[, c(1,2)], 2, min)
-NSW_df[, c(1,2)] <- scale(NSW_df[, c(1,2)], center = mins, scale = maxs - mins)
+min <- min(NSW_df$TEMPERATURE)
+max <- max(NSW_df$TEMPERATURE)
+mean <- mean(NSW_df$TEMPERATURE)
+std <- sd(NSW_df$TEMPERATURE)
+
+NSW_df$TEMPERATURE <- ((NSW_df$TEMPERATURE - min) / (max - min))
+
+
 
 # Split the data into training and testing set
+set.seed(2) 
 index <- sample(1:nrow(NSW_df), round(0.75 * nrow(NSW_df)))
 train_ <- NSW_df[index,]
 test_ <- NSW_df[-index,]
+```
 
+
+```{r}
 # fit model with dropout
-system.time(mlpKerasDropout <- train(TOTALDEMAND ~ ., data = train_, method = 'mlpKerasDropout', trControl = trainControl(method = 'cv', number = 10)))
+registerDoParallel(cores=4)
+
+system.time(mlpKerasDropout <- train(TOTALDEMAND ~ ., data = train_, method = 'mlpKerasDropout', trControl = trainControl(search = 'random', method = 'cv', number = 10), epochs = 10, tuneLength = 100))
 mlpKerasDropout
 
 mlpKerasDropout$results %>% 
@@ -68,26 +101,14 @@ mlpKerasDropout$results %>%
   head(10)
 ```
 
+
+
+
+
+
 ```{r}
-system.time(mlpKerasDropout2 <- train(TOTALDEMAND ~ ., data = train_, method = 'mlpKerasDropout', trControl = trainControl(search = 'random', method = 'cv', number = 10), epochs = 10, tuneLength = 10))
-mlpKerasDropout2
-
-mlpKerasDropout$results %>% 
-  arrange(RMSE) %>% 
-  head(10)
+NSW_df$Predicted <- predict(mlpKerasDropout2, NSW_df[, -1])
 ```
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -152,8 +173,10 @@ mlpKerasDropout$results %>%
 model = keras_model_sequential() %>% 
    layer_dense(units=64, activation="relu", input_shape=3) %>% 
    layer_dense(units=32, activation = "relu") %>% 
-   layer_dense(units=1, activation="linear")
+   layer_dense(units=1)#, activation="linear")
  
+summary(model)
+
 model %>% compile(
    loss = "mse",
    optimizer =  "adam", 
