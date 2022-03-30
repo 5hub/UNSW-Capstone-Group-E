@@ -1,0 +1,1 @@
+I am adding the Code which I discussed with you. It has multiple layer Neural Network Architecture. I am getting one error in the foreward propogation. So just go through this and let me know what you think
