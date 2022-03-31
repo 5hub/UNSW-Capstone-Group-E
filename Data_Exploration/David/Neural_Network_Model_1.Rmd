@@ -41,36 +41,36 @@ NSW_df$DATETIME <- dmy_hm(NSW_df$DATETIME)
 NSW_df <- NSW_df[, -c(2,3)]
 
 # Group based on certain conditions to make plotting easier
-#NSW_df$Year <- year(NSW_df$DATETIME)
+NSW_df$Year <- year(NSW_df$DATETIME)
 #NSW_df <- subset(NSW_df, Year == 2021)
 NSW_df$Month <- month(NSW_df$DATETIME)
-#NSW_df$day <- day(NSW_df$DATETIME)
+NSW_df$day <- day(NSW_df$DATETIME)
+
 NSW_df$Is_Wknd <- grepl("S.+", weekdays(NSW_df$DATETIME))
 NSW_df$Is_Wknd <- NSW_df$Is_Wknd * 1
+
 NSW_df$Time <- (hour(NSW_df$DATETIME)*60 + minute(NSW_df$DATETIME))/30
-```
+#NSW_df <- NSW_df[, -c(3)]
 
 
-```{r}
-NSW_df <- NSW_df[, -c(3)]
-
-
-#NSW_df$Time[NSW_df$Time < 1] <- 0
-#NSW_df$Time[NSW_df$Time > 40] <- 0
-#NSW_df$Time[NSW_df$Time > 0] <- 1
+NSW_df$Time[NSW_df$Time < 1] <- 0
+NSW_df$Time[NSW_df$Time > 40] <- 0
+NSW_df$Time[NSW_df$Time > 0] <- 1
 
 NSW_df$Is_Peak <- NSW_df$Time
-NSW_df <- NSW_df[, -5]
+#NSW_df <- NSW_df[, -5]
 
-#NSW_df$Time_x <- sin(360/47 * NSW_df$Time)
-#NSW_df$Time_y <- cos(360/47 * NSW_df$Time)
+NSW_df$Time_x <- sin(360/47 * NSW_df$Time)
+NSW_df$Time_y <- cos(360/47 * NSW_df$Time)
 #NSW_df <- NSW_df[, -5]
 
 NSW_df$Month_x <- sin(360/12 * NSW_df$Month)
 NSW_df$Month_y <- cos(360/12 * NSW_df$Month)
 NSW_df <- NSW_df[, -3]
+```
 
 
+```{r}
 # Normalize the data
 min <- min(NSW_df$TEMPERATURE)
 max <- max(NSW_df$TEMPERATURE)
@@ -101,11 +101,6 @@ mlpKerasDropout$results %>%
   head(10)
 ```
 
-
-
-
-
-
 ```{r}
 NSW_df$Predicted <- predict(mlpKerasDropout2, NSW_df[, -1])
 ```
@@ -124,6 +119,112 @@ NSW_df$Predicted <- predict(mlpKerasDropout2, NSW_df[, -1])
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{r}
+library(corrplot)
+```
+
+```{r fig.height = 10, fig.width = 30}
+M <- cor(NSW_df)
+corrplot(M, method = "number")
+```
+
+```{r fig.height = 10, fig.width = 30}
+#NSW_df <- NSW_df[, c(1, 2, 3, 4, 6, 8)]
+#M2 <- cor(NSW_df)
+#corrplot(M2, method = "number")
+
+#lm1 <- lm(formula = TOTALDEMAND ~ ., data = NSW_df)
+#summary(lm1)
+
+#predictions <- lm1 %>% predict(NSW_df)
+#RMSE(predictions, NSW_df$TOTALDEMAND)
+```
+
+
+```{r}
+NSW_df2 <- NSW_df[, c(1, 2, 3, 6, 12)]
+
+lm2 <- lm(formula = TOTALDEMAND ~ ., data = NSW_df2)
+summary(lm2)
+predictions2 <- lm2 %>% predict(NSW_df2)
+RMSE(predictions2, NSW_df2$TOTALDEMAND)
+
+```
+
+```{r}
+library(lmtest)
+library(MASS)
+
+bptest(lm2)
+
+summary(rr.huber <- rlm(TOTALDEMAND ~ ., data = NSW_df2))
+```
+
+
+
+```{r}
+abs(qt(0.05/2, 196507))
+```
+```{r}
+NSW_df <- NSW_df[, c(1,2)]
+```
+
+
+```{r}
+normalize <- function(x) {
+  return ((x - min(x)) / (max(x) - min(x)))
+}
+maxmindf <- as.data.frame(lapply(NSW_df, normalize))
+attach(maxmindf)
+maxmindf<-as.matrix(maxmindf)
+```
+
+```{r}
+ind <- sample(2, nrow(maxmindf), replace=TRUE, prob = c(0.7,0.3))
+X_train <- maxmindf[ind==1, 2]
+X_val <- maxmindf[ind==2, 2]
+y_train <- maxmindf[ind==1, 1]
+y_val <- maxmindf[ind==2, 1]
+```
+
+
+```{r}
+model <- keras_model_sequential() 
+model %>% 
+  layer_dense(units = 9, activation = 'relu', kernel_initializer='RandomNormal', input_shape = c(4)) %>% 
+  layer_dense(units = 60, activation = 'relu') %>%
+  layer_dense(units = 1, activation = 'linear')
+summary(model)
+```
+
+
+```{r}
+model %>% compile(
+  loss = 'mean_squared_error',
+  optimizer = 'adam',
+  metrics = c('mae')
+)
+
+history <- model %>% fit(
+  train_, 
+  epochs = 30, batch_size = 50, 
+  validation_split = 0.2
+)
+```
 
 
 
@@ -242,12 +343,44 @@ abline(0, 1, lwd = 2)
 
 
 
+```{r}
+normalize <- function(x) {
+  return ((x - min(x)) / (max(x) - min(x)))
+}
+maxmindf <- as.data.frame(lapply(NSW_df, normalize))
+attach(maxmindf)
+maxmindf<-as.matrix(maxmindf)
+
+ind <- sample(2, nrow(maxmindf), replace=TRUE, prob = c(0.7,0.3))
+X_train <- maxmindf[ind==1, 2]
+X_val <- maxmindf[ind==2, 2]
+y_train <- maxmindf[ind==1, 1]
+y_val <- maxmindf[ind==2, 1]
+```
 
 
 
 
 
 
+
+
+
+
+
+
+```{r}
+NSW_df <- NSW_df[, c(1,2)]
+
+# Split the data into training and testing set
+set.seed(2) 
+index <- sample(1:nrow(NSW_df), round(0.75 * nrow(NSW_df)))
+train_ <- NSW_df[index,]
+test_ <- NSW_df[-index,]
+
+
+
+```
 
 
 
@@ -290,6 +423,9 @@ colnames(train_) <- c('TEMPERATURE', 'year', 'month', 'day', 'time')
 Train_labels[2:6] 
 
 ```
+
+
+
 
 
 ```{r}
