@@ -79,7 +79,7 @@ LSTM_GRU_Hidden_Size = 300
 # This is the output Size of either the LSTM or GRU Network based on the 
 # architecture chosen
 
-LSTM_GRU_Num_Layers = 3
+LSTM_GRU_Num_Layers = 1
 # This is the number of hidden layers in either the LSTM or GRU Network 
 # chosen as per the architecture.
 
@@ -282,15 +282,22 @@ class network(tnn.Module):
         if architecture == 1 or architecture == 2:
             # This is the scenario for LSTM Network
             #------------------------------LSTM Forward Propogation---------------------# 
+            #print(self.num_layers, input.size(1), self.hidden_size)
             # hidden state
-            h_0 = torch.zeros(self.num_layers, input.size(1), self.hidden_size).to(device) 
+            h_0 = torch.zeros(self.num_layers, self.hidden_size).to(device) 
 
             # internal state
-            c_0 = torch.zeros(self.num_layers, input.size(1), self.hidden_size).to(device) 
+            c_0 = torch.zeros(self.num_layers, self.hidden_size).to(device) 
+
+            #print(h_0)
+            #print(c_0)
 
             # Initiate weights before tanh activation
             torch.nn.init.xavier_normal_(h_0) 
             torch.nn.init.xavier_normal_(c_0) 
+
+            # print(h_0)
+            # print(c_0)
 
             # Propagate input through LSTM network
             output, (h_n, c_n) = self.lstm(input, (h_0, c_0)) 
@@ -312,7 +319,8 @@ class network(tnn.Module):
 
         # reshaping the data and passing it to the 
         # fully connected dense layer 
-        out = self.fully_connected_layer1(output[:,-1,:]) 
+        
+        out = self.fully_connected_layer1(output) 
 
         # applying relu activation to the output 
         # from the fully connected dense layer
@@ -357,7 +365,7 @@ class loss(tnn.Module):
 
     def forward(self, DemandOutput, DemandTarget):
         DemandTarget = DemandTarget.to(torch.float).to(device)
-        demand_loss = self.loss_rating(DemandOutput, DemandTarget)
+        demand_loss = self.loss_demand(DemandOutput, DemandTarget)
         return demand_loss
 
 net = network()
