@@ -302,7 +302,7 @@ class network(tnn.Module):
             # This is the scenario for GRU Network
             #------------------------------GRU Forward Propogation---------------------# 
             # hidden state
-            h_0 = torch.zeros(self.num_layers, input.size(1), self.hidden_size).to(device) 
+            h_0 = torch.zeros(self.num_layers, self.hidden_size).to(device) 
             # Initiate weights before tanh activation
             torch.nn.init.xavier_normal_(h_0) 
             # Propagate input through GRU network
