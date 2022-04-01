@@ -70,12 +70,12 @@ architecture = 1 # Can have values 1, 2, 3, 4
 # 3 represents GRU Network + 1 Fully Connected linear Layer + Output Layer
 # 4 represents GRU Network + 2 Fully Connected linear Layer + Output Layer
 
-optimiser_choice = 1 # Can have  1 or 2
+optimiser_choice = 2 # Can have  1 or 2
 # The options for optimiser is as mentioned below
 # 1  -  SGD Optimiser
 # 2  -  ADAM Optimiser
 
-LSTM_GRU_Hidden_Size = 300
+LSTM_GRU_Hidden_Size = 16
 # This is the output Size of either the LSTM or GRU Network based on the 
 # architecture chosen
 
@@ -83,7 +83,7 @@ LSTM_GRU_Num_Layers = 1
 # This is the number of hidden layers in either the LSTM or GRU Network 
 # chosen as per the architecture.
 
-Linear_Layer1_output_size = 500
+Linear_Layer1_output_size = 8
 # This is the output size of the first linear Layer which is connected to
 # either GNU or LSTM as per the architecture choices made above.
 
@@ -266,7 +266,7 @@ class network(tnn.Module):
 
                 #Initialise the bias of second linear network.
                 # which will be activated lated using RELU Activation.
-                self.fully_connected_layer2.bias.data.zero_()             
+                self.fully_connected_layer2.bias.data.zero_()                         
 
         else:
             # this is the case when wrong architecture option is added 
@@ -339,7 +339,7 @@ class network(tnn.Module):
         # The final output is activated using
         #  Softmax. Thus using the log
         # softmax activation with dimension 1
-        DemandOutput = torch.log_softmax(out, dim=1)
+        DemandOutput = torch.relu(out)
 
         return DemandOutput
 
