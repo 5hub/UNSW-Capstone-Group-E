@@ -282,22 +282,15 @@ class network(tnn.Module):
         if architecture == 1 or architecture == 2:
             # This is the scenario for LSTM Network
             #------------------------------LSTM Forward Propogation---------------------# 
-            #print(self.num_layers, input.size(1), self.hidden_size)
             # hidden state
             h_0 = torch.zeros(self.num_layers, self.hidden_size).to(device) 
 
             # internal state
             c_0 = torch.zeros(self.num_layers, self.hidden_size).to(device) 
 
-            #print(h_0)
-            #print(c_0)
-
             # Initiate weights before tanh activation
             torch.nn.init.xavier_normal_(h_0) 
             torch.nn.init.xavier_normal_(c_0) 
-
-            # print(h_0)
-            # print(c_0)
 
             # Propagate input through LSTM network
             output, (h_n, c_n) = self.lstm(input, (h_0, c_0)) 
@@ -360,7 +353,7 @@ class loss(tnn.Module):
 
     def __init__(self):
         super(loss, self).__init__()
-        self.loss_demand = tnnfunc.nll_loss
+        self.loss_demand = tnnfunc.l1_loss
 
 
     def forward(self, DemandOutput, DemandTarget):

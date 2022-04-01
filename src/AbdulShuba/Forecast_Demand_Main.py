@@ -95,7 +95,7 @@ def main():
             # Forward pass through the network.
             DemandOutput = net(inputs)
             
-            loss = lossFunc(DemandOutput.view(-1).type(torch.LongTensor), DemandTarget.view(-1).type(torch.LongTensor))
+            loss = lossFunc(DemandOutput.view(-1), DemandTarget.view(-1))
 
             # Calculate gradients.
             loss.backward()
