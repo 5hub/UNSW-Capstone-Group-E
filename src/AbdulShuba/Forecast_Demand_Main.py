@@ -42,19 +42,11 @@ def main():
     # Load the training dataset
     training_dataset = energy_demand.upload_data()
 
-
     # process the data and store in tensor
     x, y = energy_demand.process_data(training_dataset)
 
-
-
     # prepare the dataset using the tensor data
     dataset = Data.TensorDataset(x, y)
-
-
-
-
-
 
     # Allow training on the entire dataset, or split it for training and validation.
     if energy_demand.trainValSplit == 1:
@@ -63,9 +55,16 @@ def main():
                                 batch_size=energy_demand.batchSize, 
                                 shuffle=True, num_workers=1)
     else:
+        train_len = round(energy_demand.trainValSplit*len(dataset))
+        train_dataset, test_dataset = torch.utils.data.random_split(dataset, [train_len, len(dataset) - train_len])
         # need to handle the split functionality
         trainLoader = Data.DataLoader( 
-                                dataset= dataset,
+                                dataset= train_dataset,
+                                batch_size=energy_demand.batchSize, 
+                                shuffle=True, num_workers=1)
+
+        testLoader = Data.DataLoader( 
+                                dataset= test_dataset,
                                 batch_size=energy_demand.batchSize, 
                                 shuffle=True, num_workers=1)
 
@@ -107,8 +106,27 @@ def main():
 
             if i % 10 == 0:
                 print("Epoch: %2d, Batch: %4d, Loss: %.3f"
-                      % (epoch + 1, i + 1, runningLoss / 500))
+                      % (epoch + 1, i + 1, runningLoss / 10))
                 runningLoss = 0
+
+
+    if energy_demand.trainValSplit != 1:
+        net.eval()
+        with torch.no_grad():
+            valid_loss = 0.0
+            for batch in testLoader:
+                inputs , DemandTarget = batch
+
+                inputs, DemandTarget = inputs.float(), DemandTarget.float()
+
+                DemandOutput = net(inputs)
+
+                loss = lossFunc(DemandOutput.view(-1), DemandTarget.view(-1))
+
+                valid_loss += loss.item()
+
+            print("Validation Loss: %.3f" % (valid_loss/len(testLoader)))
+
 
    
 

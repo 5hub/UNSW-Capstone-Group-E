@@ -108,7 +108,7 @@ weight_decay = 0.0001
 training_dataset_filename= 'training_dataset.csv'
 #Training dataset path
 
-trainValSplit = 1
+trainValSplit = 0.7
 # Training and Validation Data set Split
 # Need to work on the way to split tensordataset
 # in training and Validation Set
@@ -116,7 +116,7 @@ trainValSplit = 1
 batchSize = 1000
 # setting the batch size as a global parameter.
 
-epochs = 10 
+epochs = 10
 
 
 ################################################################################
