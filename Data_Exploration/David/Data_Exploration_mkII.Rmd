@@ -160,6 +160,15 @@ mae(NSW_df$TOTALDEMAND, NSW_df$Fcst1)
 mae(NSW_df$TOTALDEMAND, NSW_df$Fcst32)
 mae(NSW_df$TOTALDEMAND, NSW_df$lm1_fcst)
 mae(NSW_df$TOTALDEMAND, NSW_df$lm2_fcst)
+
+# Calculate MAD
+print(" ")
+print("MAD")
+mad(NSW_df$TOTALDEMAND - NSW_df$Fcst1)
+mad(NSW_df$TOTALDEMAND - NSW_df$Fcst32)
+mad(NSW_df$TOTALDEMAND - NSW_df$lm1_fcst)
+mad(NSW_df$TOTALDEMAND - NSW_df$lm2_fcst)
+
 ```
 
 These metrics show that our models perform terribly compared to the other provided.
