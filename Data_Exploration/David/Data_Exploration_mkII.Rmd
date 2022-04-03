@@ -146,6 +146,7 @@ fivenum(NSW_df$lm1_res)
 fivenum(NSW_df$lm2_res)
 
 # Calculate RSME
+print(" ")
 print("RSME")
 sqrt(mean(NSW_df$Fcst1_res^2))
 sqrt(mean(NSW_df$Fcst32_res^2))
@@ -153,6 +154,7 @@ sqrt(mean((NSW_df$lm1_res)^2))
 sqrt(mean((NSW_df$lm2_res)^2))
 
 # Calculate MAE
+print(" ")
 print("MAE")
 mae(NSW_df$TOTALDEMAND, NSW_df$Fcst1)
 mae(NSW_df$TOTALDEMAND, NSW_df$Fcst32)
@@ -193,5 +195,84 @@ The key variables that we can identify from this for use in a ML model would be:
 write.csv(NSW_df, "Explored_data.csv", row.names = FALSE)
 ```
 
+What about using demand from 30, 60 and 90 mins prior as a predictor?
+
+
+```{r}
+NSW_df$dem_30 <- NSW_df$TOTALDEMAND
+NSW_df <- NSW_df %>%
+  mutate(dem_30 = lag(dem_30, 1)) %>%
+  na.omit()
+
+NSW_df$dem_60 <- NSW_df$TOTALDEMAND
+NSW_df <- NSW_df %>%
+  mutate(dem_60 = lag(dem_60, 2)) %>%
+  na.omit()
+
+NSW_df$dem_90 <- NSW_df$TOTALDEMAND
+NSW_df <- NSW_df %>%
+  mutate(dem_90 = lag(dem_90, 3)) %>%
+  na.omit()
+```
+
+
+
+
+
+
+```{r}
+ggplot(NSW_df, aes(x = dem_30, y = TOTALDEMAND)) + geom_point() #, group = year(DATETIME)))
+ggplot(NSW_df, aes(x = dem_60, y = TOTALDEMAND)) + geom_point() #, group = year(DATETIME)))
+ggplot(NSW_df, aes(x = dem_90, y = TOTALDEMAND)) + geom_point() #, group = year(DATETIME)))
+```
+
+
+
+
+```{r}
+# 
+lmd30 <- lm(TOTALDEMAND ~ dem_30, data = NSW_df)
+summary(lmd30)
+plot(lmd30)
+
+```
+
+
+
+
+
+
+```{r}
+NSW_df$temp_30 <- NSW_df$TEMPERATURE
+NSW_df <- NSW_df %>%
+  mutate(temp_30 = lag(temp_30, 1)) %>%
+  na.omit()
+```
+
+
+
+
+
+
+```{r}
+ggplot(NSW_df, aes(x = temp_30, y = TOTALDEMAND)) + geom_point()
+```
+
+
+
+
+```{r}
+# 
+lmt30 <- lm(TOTALDEMAND ~ temp_30, data = NSW_df)
+summary(lmt30)
+plot(lmt30)
+
+```
+
+
+```{r}
+M <- cor(NSW_df)
+corrplot(M, method = "number")
+```
 
 

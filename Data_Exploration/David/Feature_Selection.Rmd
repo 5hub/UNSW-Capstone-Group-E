@@ -1,0 +1,188 @@
+---
+title: "Feature_Selection"
+author: "David Anderson"
+date: "4/3/2022"
+output: html_document
+---
+
+Want to see if we can come up with some mroe useful features than just temperature. We have seen that temperature by itself is a pretty bad indicator of demand.
+
+```{r fig.height = 10, fig.width = 30}
+# Import libraries
+library(lubridate)
+library(ggplot2)
+library(dplyr)
+library(hms)
+library(Metrics)
+library(corrplot)
+
+# Import cleaned data
+features <- read.csv("Cleaned_Data_mkII.csv")
+features$DATETIME <- ymd_hms(features$DATETIME)
+
+#Look at the relation between temp and demand per year to show the correlation.
+ggplot(features, aes(x = TEMPERATURE, y = TOTALDEMAND)) +
+  geom_point() +
+  facet_wrap(~year(DATETIME))
+```
+
+What about using demand from 30, 60 and 90 mins prior as a predictor?
+
+```{r}
+features$dem_30 <- features$TOTALDEMAND
+features <- features %>%
+  mutate(dem_30 = lag(dem_30, 1)) %>%
+  na.omit()
+
+features$dem_60 <- features$TOTALDEMAND
+features <- features %>%
+  mutate(dem_60 = lag(dem_60, 2)) %>%
+  na.omit()
+
+features$dem_90 <- features$TOTALDEMAND
+features <- features %>%
+  mutate(dem_90 = lag(dem_90, 3)) %>%
+  na.omit()
+
+ggplot(features, aes(x = dem_30, y = TOTALDEMAND)) + geom_point()
+ggplot(features, aes(x = dem_60, y = TOTALDEMAND)) + geom_point()
+ggplot(features, aes(x = dem_90, y = TOTALDEMAND)) + geom_point()
+```
+
+These are obviously much better predictors. How well can we predict current demand from demand 30 mins ago, using a simple linear model?
+
+```{r}
+# 
+lmd30 <- lm(TOTALDEMAND ~ dem_30, data = features)
+summary(lmd30)
+plot(lmd30)
+
+```
+
+Not bad.... Let's explore some other potential features using a coorplot.
+
+```{r}
+# Import cleaned data
+weather <- read.csv("weather.csv")
+#features$DATETIME <- ymd_hms(features$DATETIME)
+
+features$date <- date(features$DATETIME)
+weather$date <- as.Date(with(weather, paste(Year, Month, Day, sep="-")), "%Y-%m-%d")
+
+weather <- weather[, -c(1, 2, 3, 4, 5, 7, 8)]
+
+# Do a left merge on dem and temp data
+features <- left_join(features, weather, by = 'date')
+```
+
+
+
+
+We have seen that weekday, month and time are a rough indicator of change, but not a very good one.
+
+```{r}
+features$day <- wday(features$DATETIME)
+features$month <- month(features$DATETIME)
+features$time <- as_hms(features$DATETIME)
+```
+
+
+
+
+
+
+If we can use time from 30, 60 and/or 90 mins ago as useful features, it would mean that we can use historic temp data in a model, rather than forecasted temp data. This would be more accurate as an input but will it be as useful as a forecast temp value?
+
+```{r}
+features$temp_30 <- features$TEMPERATURE
+features <- features %>%
+  mutate(temp_30 = lag(temp_30, 1)) %>%
+  na.omit()
+
+features$temp_60 <- features$TEMPERATURE
+features <- features %>%
+  mutate(temp_60 = lag(temp_60, 2)) %>%
+  na.omit()
+
+features$temp_90 <- features$TEMPERATURE
+features <- features %>%
+  mutate(temp_90 = lag(temp_90, 3)) %>%
+  na.omit()
+```
+
+
+
+
+
+```{r}
+features$time <- (hour(features$time)*60 + minute(features$time))/30
+features <- features[, -c(3, 7)]
+```
+
+
+
+
+
+
+```{r fig.height = 10, fig.width = 30}
+M <- cor(features)
+corrplot(M, method = "number")
+```
+
+
+```{r}
+fsmlm <- lm(TOTALDEMAND ~ ., data = features)
+summary(fsmlm)
+plot(fsmlm)
+
+print(paste("MAE:", mae(features$TOTALDEMAND, predict(fsmlm))))
+```
+
+```{r}
+fsmlm2 <- lm(TOTALDEMAND ~ temp_30 + dem_30 + dem_60, data = features)
+summary(fsmlm2)
+plot(fsmlm2)
+
+
+print(paste("MAE:", mae(features$TOTALDEMAND, predict(fsmlm2))))
+
+plot(features$TOTALDEMAND, predict(fsmlm2))
+
+```
+
+
+
+
+```{r}
+## Export the clean_data_w_fcst to csv
+#write.csv(features, "Explored_data.csv", row.names = FALSE)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
