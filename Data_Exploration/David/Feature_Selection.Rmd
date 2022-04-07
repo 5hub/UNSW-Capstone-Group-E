@@ -136,6 +136,8 @@ summary(fsmlm)
 plot(fsmlm)
 
 print(paste("MAE:", mae(features$TOTALDEMAND, predict(fsmlm))))
+
+print(paste("MAD:", mad(features$TOTALDEMAND - predict(fsmlm))))
 ```
 
 ```{r}
@@ -146,6 +148,11 @@ plot(fsmlm2)
 
 print(paste("MAE:", mae(features$TOTALDEMAND, predict(fsmlm2))))
 
+print(paste("MAD:", mad(features$TOTALDEMAND - predict(fsmlm2))))
+```
+
+
+```{r}
 plot(features$TOTALDEMAND, predict(fsmlm2))
 
 ```
@@ -159,10 +166,24 @@ plot(features$TOTALDEMAND, predict(fsmlm2))
 ```
 
 
+```{r}
+features$change_in_demand <- features$TOTALDEMAND - features$dem_30
+
+```
 
 
 
 
+```{r}
+fslm <- lm(change_in_demand ~ TEMPERATURE, data = features)
+summary(fslm)
+plot(fslm)
+
+
+print(paste("MAE:", mae(features$TOTALDEMAND, predict(fslm))))
+
+print(paste("MAD:", mad(features$TOTALDEMAND - predict(fslm))))
+```
 
 
 
