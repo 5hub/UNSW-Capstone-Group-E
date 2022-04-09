@@ -38,49 +38,79 @@ NSW_df <- read.csv("../../report/Cleaned_Data.csv")
 # Convert date and time to a datetime
 NSW_df$DATETIME <- paste(NSW_df$Date, NSW_df$Time)
 NSW_df$DATETIME <- dmy_hm(NSW_df$DATETIME)
-NSW_df <- NSW_df[, -c(2,3)]
+#NSW_df <- NSW_df[, -c(2,3)]
 
 # Group based on certain conditions to make plotting easier
-NSW_df$Year <- year(NSW_df$DATETIME)
-#NSW_df <- subset(NSW_df, Year == 2021)
-NSW_df$Month <- month(NSW_df$DATETIME)
-NSW_df$day <- day(NSW_df$DATETIME)
+#NSW_df$Year <- year(NSW_df$DATETIME)
+#NSW_df <- subset(NSW_df, Year == c(2020, 2021))
+#NSW_df$Month <- month(NSW_df$DATETIME)
+#NSW_df$day <- day(NSW_df$DATETIME)
 
-NSW_df$Is_Wknd <- grepl("S.+", weekdays(NSW_df$DATETIME))
-NSW_df$Is_Wknd <- NSW_df$Is_Wknd * 1
+#NSW_df$Is_Wknd <- grepl("S.+", weekdays(NSW_df$DATETIME))
+#NSW_df$Is_Wknd <- NSW_df$Is_Wknd * 1
 
-NSW_df$Time <- (hour(NSW_df$DATETIME)*60 + minute(NSW_df$DATETIME))/30
+#NSW_df$Time <- (hour(NSW_df$DATETIME)*60 + minute(NSW_df$DATETIME))/30
 #NSW_df <- NSW_df[, -c(3)]
 
 
-NSW_df$Time[NSW_df$Time < 1] <- 0
-NSW_df$Time[NSW_df$Time > 40] <- 0
-NSW_df$Time[NSW_df$Time > 0] <- 1
+#NSW_df$Time[NSW_df$Time < 1] <- 0
+#NSW_df$Time[NSW_df$Time > 40] <- 0
+#NSW_df$Time[NSW_df$Time > 0] <- 1
 
-NSW_df$Is_Peak <- NSW_df$Time
+#NSW_df$Is_Peak <- NSW_df$Time
 #NSW_df <- NSW_df[, -5]
 
-NSW_df$Time_x <- sin(360/47 * NSW_df$Time)
-NSW_df$Time_y <- cos(360/47 * NSW_df$Time)
+#NSW_df$Time_x <- sin(360/47 * NSW_df$Time)
+#NSW_df$Time_y <- cos(360/47 * NSW_df$Time)
 #NSW_df <- NSW_df[, -5]
 
-NSW_df$Month_x <- sin(360/12 * NSW_df$Month)
-NSW_df$Month_y <- cos(360/12 * NSW_df$Month)
-NSW_df <- NSW_df[, -3]
+#NSW_df$Month_x <- sin(360/12 * NSW_df$Month)
+#NSW_df$Month_y <- cos(360/12 * NSW_df$Month)
+#NSW_df <- NSW_df[, -3]
+
+
+
+NSW_df <- NSW_df %>%
+  mutate(dem_30=lag(TOTALDEMAND)) %>%
+  na.omit()
+
+NSW_df <- NSW_df %>%
+  mutate(dem_60 = lag(dem_30)) %>%
+  na.omit()
+
+
+NSW_df <- NSW_df %>%
+  mutate(temp_30 = lag(TEMPERATURE)) %>%
+  na.omit()
+
+
+NSW_df <- NSW_df[NSW_df$DATETIME >= '2020-03-16' & NSW_df$DATE < '2021-03-16',]
+
+NSW_df <- NSW_df[, -c(2, 3, 4, 5)]
+
+
 ```
 
 
 ```{r}
-# Normalize the data
-min <- min(NSW_df$TEMPERATURE)
-max <- max(NSW_df$TEMPERATURE)
-mean <- mean(NSW_df$TEMPERATURE)
-std <- sd(NSW_df$TEMPERATURE)
+## Normalize the data
+#min <- min(NSW_df$TEMPERATURE)
+#max <- max(NSW_df$TEMPERATURE)
+#mean <- mean(NSW_df$TEMPERATURE)
+#std <- sd(NSW_df$TEMPERATURE)
 
-NSW_df$TEMPERATURE <- ((NSW_df$TEMPERATURE - min) / (max - min))
+#NSW_df$TEMPERATURE <- ((NSW_df$TEMPERATURE - min) / (max - min))
+
+NSW_df$temp_30 <- ((NSW_df$temp_30 - min(NSW_df$temp_30)) / (max(NSW_df$temp_30) - min(NSW_df$temp_30)))
+NSW_df$dem_30 <- ((NSW_df$dem_30 - min(NSW_df$dem_30)) / (max(NSW_df$dem_30) - min(NSW_df$dem_30)))
+NSW_df$dem_60 <- ((NSW_df$dem_60 - min(NSW_df$dem_60)) / (max(NSW_df$dem_60) - min(NSW_df$dem_60)))
+
+
+```
 
 
 
+```{r}
 # Split the data into training and testing set
 set.seed(2) 
 index <- sample(1:nrow(NSW_df), round(0.75 * nrow(NSW_df)))
@@ -93,7 +123,7 @@ test_ <- NSW_df[-index,]
 # fit model with dropout
 registerDoParallel(cores=4)
 
-system.time(mlpKerasDropout <- train(TOTALDEMAND ~ ., data = train_, method = 'mlpKerasDropout', trControl = trainControl(search = 'random', method = 'cv', number = 10), epochs = 10, tuneLength = 100))
+system.time(mlpKerasDropout <- train(TOTALDEMAND ~ ., data = train_, method = 'mlpKerasDropout', trControl = trainControl(search = 'random', method = 'cv', number = 3), epochs = 3, tuneLength = 100))
 mlpKerasDropout
 
 mlpKerasDropout$results %>% 
