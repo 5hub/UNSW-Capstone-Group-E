@@ -73,6 +73,7 @@ def main():
     lossFunc = energy_demand.lossFunc
     optimiser = energy_demand.optimiser
 
+    loss_history = []
     # Train.
     for epoch in range(energy_demand.epochs):
         runningLoss = 0
@@ -107,6 +108,7 @@ def main():
             if i % 10 == 0:
                 print("Epoch: %2d, Batch: %4d, Loss: %.3f"
                       % (epoch + 1, i + 1, runningLoss / 10))
+                loss_history.append(runningLoss / 10)
                 runningLoss = 0
 
 
@@ -128,7 +130,7 @@ def main():
             print("Validation Loss: %.3f" % (valid_loss/len(testLoader)))
 
 
-   
+    print(loss_history)
 
 if __name__ == '__main__':
     main()

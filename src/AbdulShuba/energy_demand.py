@@ -62,7 +62,7 @@ input_dim = 4
 # Different Architecture are defined below to test with different 
 # Neural Network
 
-architecture = 1 # Can have values 1, 2, 3, 4
+architecture = 4 # Can have values 1, 2, 3, 4
 # This Architecture Value can be changed in order to change the 
 # Neural Network Architecture. Below are the details of the value
 # 1 represents LSTM Network + 1 fully connected linear layer + Output Layer
@@ -75,19 +75,19 @@ optimiser_choice = 2 # Can have  1 or 2
 # 1  -  SGD Optimiser
 # 2  -  ADAM Optimiser
 
-LSTM_GRU_Hidden_Size = 16
+LSTM_GRU_Hidden_Size = 100
 # This is the output Size of either the LSTM or GRU Network based on the 
 # architecture chosen
 
-LSTM_GRU_Num_Layers = 1
+LSTM_GRU_Num_Layers = 2
 # This is the number of hidden layers in either the LSTM or GRU Network 
 # chosen as per the architecture.
 
-Linear_Layer1_output_size = 8
+Linear_Layer1_output_size = 50
 # This is the output size of the first linear Layer which is connected to
 # either GNU or LSTM as per the architecture choices made above.
 
-Linear_Layer2_output_size = 120
+Linear_Layer2_output_size = 10
 # This is the output size of the second linear Layer which is connected to
 # either GNU or LSTM as per the architecture choices made above.
 
@@ -116,7 +116,7 @@ trainValSplit = 0.7
 batchSize = 1000
 # setting the batch size as a global parameter.
 
-epochs = 10
+epochs = 20
 
 
 ################################################################################
