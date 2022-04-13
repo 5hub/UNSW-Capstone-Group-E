@@ -116,12 +116,25 @@ features <- features %>%
 
 ```{r}
 features$time <- (hour(features$time)*60 + minute(features$time))/30
-features <- features[, -c(3, 7)]
+#features <- features[, -c(3, 7)]
 ```
 
 
+```{r}
+features <- features[, -c(3, 4, 5, 6, 7, 8)]
+```
 
+```{r}
+features$Demand <- features$TOTALDEMAND
+features$Temperature <- features$TEMPERATURE
+features$Day <- features$day
+features$Month <- features$month
+features$Time <- features$time
+```
 
+```{r}
+features <- features[, -c(1,2,3,4,5)]
+```
 
 
 ```{r fig.height = 10, fig.width = 30}

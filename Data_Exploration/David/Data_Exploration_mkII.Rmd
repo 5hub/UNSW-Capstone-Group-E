@@ -23,6 +23,72 @@ NSW_df$DATETIME <- ymd_hms(NSW_df$DATETIME)
 
 It's unlikely to give us any results but let's look at the relation between temp and demand per year to see if there is magically a useful correlation.
 
+```{r fig.height = 10, fig.width = 15}
+
+# This is for the report. Delete later
+
+# Plot the temp and demand data per year
+ggplot(NSW_df, aes(x = TEMPERATURE, y = TOTALDEMAND)) +
+  ggtitle("Temperature vs Demand for 2010-2021") +
+  xlab('Temperature (deg celcius)') +
+  ylab('Demand (MW)') +
+  geom_point()
+```
+
+```{r fig.height = 10, fig.width = 15}
+### This is to generate a graph for the report. Delete later
+
+# Boxplot temp per hour
+ggplot(NSW_df, aes(x = as_hms(DATETIME), y = TOTALDEMAND, group = as_hms(DATETIME))) +
+  ggtitle("Demand vs Time of Day") +
+  xlab('Time') +
+  ylab('Demand (MW)') +
+  geom_boxplot()
+```
+
+```{r fig.height = 10, fig.width = 15}
+### This is to generate a graph for the report. Delete later
+
+# Boxplot temp per hour
+ggplot(NSW_df, aes(x = wday(DATETIME), y = TOTALDEMAND, group = wday(DATETIME))) +
+  ggtitle("Demand vs Day of Week") +
+  xlab('Day of Week') +
+  ylab('Demand (MW)') +
+  geom_boxplot()
+```
+
+```{r fig.height = 10, fig.width = 15}
+### This is to generate a graph for the report. Delete later
+
+# Boxplot temp per hour
+ggplot(NSW_df, aes(x = week(DATETIME), y = TOTALDEMAND, group = week(DATETIME))) +
+  ggtitle("Demand vs Week of Year") +
+  xlab('Week of Year') +
+  ylab('Demand (MW)') +
+  geom_boxplot()
+```
+
+```{r fig.height = 10, fig.width = 15}
+### This is to generate a graph for the report. Delete later
+
+# Boxplot temp per hour
+ggplot(NSW_df, aes(x = month(DATETIME), y = TOTALDEMAND, group = month(DATETIME))) +
+  ggtitle("Demand vs Month of Year") +
+  xlab('Month of Year') +
+  ylab('Demand (MW)') +
+  geom_boxplot()
+```
+
+
+
+
+
+
+
+
+
+
+
 ```{r fig.height = 10, fig.width = 30}
 # Plot the temp and demand data per year
 ggplot(NSW_df, aes(x = TEMPERATURE, y = TOTALDEMAND)) +
@@ -65,6 +131,15 @@ There is definitely a correlation between temperature and demand but we can see 
 All of the years exhibit similar trends. Note that the demand data is scaled by a factor of 250 and the y-axis scales are free to fit the data, so we will not notice any increase/reduction over time in relative temp/demand in this plot.
 
 The data seems to show that there is more chaotic energy usage in the months of Nov - Feb. Can we verify this with a plot?
+
+
+
+
+```{r}
+hms(NSW_df$DATETIME)
+```
+
+
 
 ```{r fig.height = 10, fig.width = 30}
 # Boxplot temp per month
