@@ -1,11 +1,11 @@
 ---
 title: "Reducing the forecast_nsw dataset"
-authors: "David Anderson z5343521"
+authors: "Abdul	El-Hamawi	z5019165, Chris	Strods	z5329477, David Anderson z5343521, Jamie	Twiss	z5353394, Shubhankar	Dutta	z5304573, Sonal	Chawla	z5092985"
 date: "22/03/2022"
 output: html_document
 ---
 
-I wish to reduce the size of the forecast_nsw dataset so that we can store it on the GitHub repository.
+We wish to reduce the size of the forecast_nsw dataset so that we can store it on the GitHub repository.
 
 ```{r}
 #library(zip)
