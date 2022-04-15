@@ -30,7 +30,20 @@ Outputs are the graphs in Exploratory Data Analysis in the project.
 
 
 Neural Network Code:
-
+The Neural Network Models were developed using the python files. They are as below: - 
+   1. config.py -> This config file allows us to use System GPU or CUDA. 
+   2. Forecast_Demand_Main.py -> is the main file which call the pythion libraries and Trains the Neural Network. 
+   3. energy_demand.py -> This python file has all the python functions/ classes defined which are called in "Forecast_Demand_Main.py"
+   
+   The Neural Network uses a file "training_dataset.csv" to train the model. This file is a subset of the Cleaned_Data.csv file. 
+   
+   The program is designed in such a way that different Neural Network Architectures can be dynamically selected with the 
+   change of a global parameter "architecture". Can global variable "architecture" in energy_demand.py file can have values 4 values. (1,2,3 and 4)
+   This architecture Value can be changed in order to change the Neural Network Architecture. Below are the details of the value
+   When architecture = 1, Neural Network represents LSTM Network + 1 fully connected linear layer + Output Layer
+   When architecture = 2, Neural Network represents LSTM Network + 2 Fully Connected linear Layer + Output Layer
+   When architecture = 3, Neural Network represents represents GRU Network + 1 Fully Connected linear Layer + Output Layer
+   When architecture = 4, Neural Network represents represents GRU Network + 2 Fully Connected linear Layer + Output Layer
 
 
 Machine Learning Code:
