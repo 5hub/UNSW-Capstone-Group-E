@@ -1,0 +1,172 @@
+---
+title: "Cleaning the forecast_nsw dataset"
+authors: "David Anderson z5343521"
+date: "19/03/2022"
+output: html_document
+---
+
+Now that the forecast NSW dataset has been reduced, I want to see what information can be extracted from it.
+
+```{r}
+# Import libraries
+library(lubridate)
+library(dplyr)
+library(data.table)
+library(Metrics)
+
+# Import forecast dataset
+fcst_nsw = fread("forecastdemand_nsw_reduced.csv.gz")
+```
+
+```{r}
+# Create a new dataframe so that I can work on it and can re-load it from the original data without having to read the zipped file again which takes ages.
+fcst_nsw2 <- fcst_nsw
+
+# Convert the datetimes using lubridate
+fcst_nsw2$LASTCHANGED <- ymd_hms(fcst_nsw2$LASTCHANGED)
+fcst_nsw2$DATETIME <- ymd_hms(fcst_nsw2$DATETIME)
+
+# Check to see how many forecasts there are from each model.
+as.data.frame(table(fcst_nsw2$PERIODID))
+```
+
+It looks like there are forecasts for all 196505 30 minute intervals of demand. The huge size of this dataset is in the fact that there are 79 different sets of forecasts, one for each 30 min interval before the actual datetime (from 30 mins to 79*30mins = 39hrs 30mins before the actual DATETIME).
+There are a fair few missing values after PERIODID 32. For the sake of brevity at the moment I will only include 32 forecast models.
+
+```{r}
+# Make 32 different dataframes, each containing the data from forecast 1*30mins out to 32*30mins out
+for (i in c(1,32)){
+  assign(paste0("Fcst", i), fcst_nsw2[fcst_nsw2$PERIODID == i, ][, -c(1, 3)])
+  
+}
+
+#Import cleaned dataset
+clean_NSW_data <- read.csv("Cleaned_Data.csv")
+
+clean_NSW_data$DATETIME <- ymd_hms(clean_NSW_data$DATETIME)
+
+# Rename the forecast demand columns to something more appropriate for each forecast
+Fcst1 <- rename(Fcst1, Fcst1 = FORECASTDEMAND)
+Fcst32 <- rename(Fcst32, Fcst32 = FORECASTDEMAND)
+
+# Do a left merge on clean_NSW_data and the forecast1 and forecast31 data
+clean_data_w_fcst <- left_join(clean_NSW_data, Fcst1, by = 'DATETIME', copy = TRUE)
+clean_data_w_fcst <- left_join(clean_data_w_fcst, Fcst32, by = 'DATETIME', copy = TRUE)
+
+# Create a column containing how much this forecast was away from the actual consumption
+clean_data_w_fcst$Fcst1_res <- clean_data_w_fcst$TOTALDEMAND - clean_data_w_fcst$Fcst1
+clean_data_w_fcst$Fcst32_res <- clean_data_w_fcst$TOTALDEMAND - clean_data_w_fcst$Fcst32
+
+# Fill NA values with the value before it.
+setnafill(clean_data_w_fcst, type = "locf")
+
+# Plot this difference
+boxplot(clean_data_w_fcst$Fcst1_res, clean_data_w_fcst$Fcst32_res)
+
+# Caluculate MAE
+mae(clean_data_w_fcst$TOTALDEMAND, clean_data_w_fcst$Fcst1)
+mae(clean_data_w_fcst$TOTALDEMAND, clean_data_w_fcst$Fcst32)
+
+```
+
+MAE was chosen to be the metric to evaluate our models on.
+
+```{r}
+# Export the clean_data_w_fcst to csv
+write.csv(clean_data_w_fcst, "Cleaned_Data_w_fcst.csv", row.names = FALSE)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Some code that doesn't work yet. This is how I think I need to simplify some of the above code.
+
+```{r}
+for (i in 1:32){
+  assign(paste0("Fcst", i)[1], toString(paste0("Fcast", i)))
+  
+} 
+
+rename((paste0("Fcast", 1), Fcst1 = FORECASTDEMAND)
+
+##names(Fcst1)[1] <- "Fcst1"
+
+paste0("Fcst", 1)
+```
+
+
+```{r}
+# Make an empty list
+mylist <- list()
+
+# Populate it with each of the 32 different forecast models
+for (i in 1:32){
+  mylist[[i]] <- fcst_nsw2[fcst_nsw2$PERIODID == i, ]
+}
+```
+
+
+
+
+
