@@ -1,0 +1,96 @@
+---
+title: "NSW data exploration"
+authors: "Abdul	El-Hamawi	z5019165, Chris	Strods	z5329477, David Anderson z5343521, Jamie	Twiss	z5353394, Shubhankar	Dutta	z5304573, Sonal	Chawla	z5092985"
+date: "19/03/2022"
+output: html_document
+---
+
+We want to explore the energy demand dataset for NSW and highlight interesting trends.
+We will be using a set of data that has already been cleaned.
+
+```{r}
+# Import libraries
+library(lubridate)
+library(ggplot2)
+library(dplyr)
+library(hms)
+library(Metrics)
+library(corrplot)
+
+# Import cleaned data
+Clean_df <- read.csv("Cleaned_Data.csv")
+Clean_df$DATETIME <- ymd_hms(Clean_df$DATETIME)
+```
+Graph temperature vs demand over all of the data
+
+```{r fig.height = 10, fig.width = 15}
+# Plot the temp and demand data per year
+ggplot(Clean_df, aes(x = TEMPERATURE, y = TOTALDEMAND)) +
+  ggtitle("Temperature vs Demand for 2010-2021") +
+  xlab('Temperature (deg celcius)') +
+  ylab('Demand (MW)') +
+  geom_point()
+```
+
+Demand is likely to fluctuate over the time of the day.
+
+```{r fig.height = 10, fig.width = 15}
+# Boxplot demand vs time of day
+ggplot(Clean_df, aes(x = as_hms(DATETIME), y = TOTALDEMAND, group = as_hms(DATETIME))) +
+  ggtitle("Demand vs Time of Day") +
+  xlab('Time') +
+  ylab('Demand (MW)') +
+  geom_boxplot()
+```
+Day of the week is less likely to be an indicator but we will look to see
+
+```{r fig.height = 10, fig.width = 15}
+# Boxplot demand over day of the week
+ggplot(Clean_df, aes(x = wday(DATETIME), y = TOTALDEMAND, group = wday(DATETIME))) +
+  ggtitle("Demand vs Day of Week") +
+  xlab('Day of Week') +
+  ylab('Demand (MW)') +
+  geom_boxplot()
+```
+
+Does week of the year have an impact?
+
+```{r fig.height = 10, fig.width = 15}
+# Boxplotdemand vs week of the year
+ggplot(Clean_df, aes(x = week(DATETIME), y = TOTALDEMAND, group = week(DATETIME))) +
+  ggtitle("Demand vs Week of Year") +
+  xlab('Week of Year') +
+  ylab('Demand (MW)') +
+  geom_boxplot()
+```
+Month of the year will show the same trend at a higher level
+
+```{r fig.height = 10, fig.width = 15}
+# Boxplot demand vs month of year
+ggplot(Clean_df, aes(x = month(DATETIME), y = TOTALDEMAND, group = month(DATETIME))) +
+  ggtitle("Demand vs Month of Year") +
+  xlab('Month of Year') +
+  ylab('Demand (MW)') +
+  geom_boxplot()
+```
+
+Finally, let's see what the correlation is between demand, temperature, day, month and time of day.
+
+```{r fig.height = 10, fig.width = 15}
+# Convert column names to something nicer
+Clean_df$Demand <- Clean_df$TOTALDEMAND
+Clean_df$Temperature <- Clean_df$TEMPERATURE
+Clean_df$Day <- wday(Clean_df$DATETIME)
+Clean_df$Month <- month(Clean_df$DATETIME)
+Clean_df$Time <- as_hms(Clean_df$DATETIME)
+Clean_df <- Clean_df[, -c(1,2,3)]
+
+# Convert time to numeric
+Clean_df$Time <- (hour(Clean_df$Time)*60 + minute(Clean_df$Time))/30
+
+# Plot corrplot
+M <- cor(Clean_df)
+corrplot(M, method = "number")
+```
+
+

@@ -25,14 +25,14 @@ Output is Cleaned_Data_w_fcst.csv
 
 
 Data Exploration:
-
-
-
-Cleaned_Data_mkII.csv is used as an input in Data_Exploration_mkIII.rmd to conduct data exploration and highlight potential features of the models. 
+Cleaned_Data.csv is used as an input in Data_Exploration.Rmd to conduct data exploration and highlight potential features of the models. 
 Outputs are the graphs in Exploratory Data Analysis in the project.
 
 
+Neural Network Code:
 
 
-Cleaned_Data_mkII.csv is used in ####ML python file#### to conduct ML learning specific features and training
-Outputs will be a csv file with 90% CI data for the target_test dataset.
+
+Machine Learning Code:
+Cleaned_Data.csv is used in ####ML python file#### to conduct ML learning specific features and training ##### Make sure this is correct ####
+Output is conf_int_random_forest.csv with 90% CI data to be used to create model results graphs.
