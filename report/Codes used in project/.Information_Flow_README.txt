@@ -1,23 +1,38 @@
-Data was downloaded to loca because of size being so large
-
-Forecast_File_Reduction.Rmd run to reduce the size of this data in order for it to fit on GitHub
+The prupose of this text file is to explain the flow of information through the different segments of code and stages of our report.
 
 
+Data Collection:
+The initial collection of files supplied in our GitHub repository were:
+	- forecastdemand_nsw.csv.zip.partaa
+	- forecastdemand_nsw.csv.zip.partab
+	- temperature_nsw.csv.zip
+	- totaldemand_nsw.csv.zip
+
+forecastdemand_nsw.csv.zip.partaa and forecastdemand_nsw.csv.zip.partab were required to be downloaded to a loacl machine due to their large size not beign supported by GitHub.
+
+Forecast_File_Reduction.Rmd is a section of code used to merge and reduce the size of these two files in order for it to fit on GitHub. The output is a file 'forecastdemand_nsw_reduced.csv.gz'.
 
 
-Temperature_nsw.csv.zip and total_demand_nsw.csv.zip are used as inputs in Data_cleaning_mkII.Rmd.
-This file verifies that our demand data is int he format that we want it to be and to merge temperature data onto it and fix any missing values.
-Output is Cleaned_Data_mkII.csv -- Check that our ML and NN models use this as an input.
+Data Cleaning:
+Temperature_nsw.csv.zip and total_demand_nsw.csv.zip are used as inputs in Data_cleaning.Rmd.
+This file verifies that our demand data is complete and entries occur every 30 minutes.
+We then merge temperature data onto it and fix any missing values.
+Output is Cleaned_Data.csv -- Check that our ML models use this as an input.
+
+Cleaned_Data.csv and forecastdemand_nsw_reduced.csv.gz are used as inputs in Forecast_Cleaning.Rmd.
+This file extracts forecasts made 30 minutes in advance and calcualtes it's MAe to be used as an evaluation metric across the project.
+Output is Cleaned_Data_w_fcst.csv
 
 
-
-
-
-Cleaned_Data_mkII.csv is used as an input in Data_Exploration_mkIII.rmd to conduct data exploration and highlight potential features of the models. 
+Data Exploration:
+Cleaned_Data.csv is used as an input in Data_Exploration.Rmd to conduct data exploration and highlight potential features of the models. 
 Outputs are the graphs in Exploratory Data Analysis in the project.
 
 
+Neural Network Code:
 
 
-Cleaned_Data_mkII.csv is used in ####ML python file#### to conduct ML learning specific features and training
-Outputs will be a csv file with 90% CI data for the target_test dataset.
+
+Machine Learning Code:
+Cleaned_Data.csv is used in ML_training.ipynb to conduct ML learning training
+Output is conf_int_random_forest.csv with 90% CI data to be used to create model results graphs.
