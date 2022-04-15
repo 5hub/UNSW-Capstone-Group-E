@@ -1,0 +1,27 @@
+---
+title: "Reducing the forecast_nsw dataset"
+authors: "Abdul	El-Hamawi	z5019165, Chris	Strods	z5329477, David Anderson z5343521, Jamie	Twiss	z5353394, Shubhankar	Dutta	z5304573, Sonal	Chawla	z5092985"
+date: "22/03/2022"
+output: html_document
+---
+
+We wish to reduce the size of the forecast_nsw dataset so that we can store it on the GitHub repository.
+
+```{r}
+# Import forecast dataset. This will need to be changed to suit your own local directories       
+fcst_nsw <- read.csv('F:/Users/Dave/Desktop/forecastdemand_nsw.csv', header = T)
+
+# Remove PREDISPATCHSEQNO and REGIONID
+# PREDISPATCHSEQNO is a descending series of numbers that correspond to forecasts taken over time, something like a primary key for each forecast conducted. The same information is still contained within the data if required.
+# REGIONID is just 'NSW1'
+fcst_nsw <- fcst_nsw[, -c(1,2)]
+
+# Export the NSW_df to csv
+write.csv(fcst_nsw, file = gzfile("forecastdemand_nsw_reduced.csv.gz"), row.names = FALSE)
+```
+
+Done!
+
+
+
+
