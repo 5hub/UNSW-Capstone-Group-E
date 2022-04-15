@@ -17,11 +17,7 @@ fcst_nsw <- read.csv('F:/Users/Dave/Desktop/forecastdemand_nsw.csv', header = T)
 fcst_nsw <- fcst_nsw[, -c(1,2)]
 
 # Export the NSW_df to csv
-write.csv(fcst_nsw, file = gzfile("forecastdemand_nsw_reduced.csv.gz"), row.names = FALSE)
+write.csv(fcst_nsw, file = gzfile("./forecastdemand_nsw_reduced.csv.gz"), row.names = FALSE)
 ```
 
 Done!
-
-
-
-
